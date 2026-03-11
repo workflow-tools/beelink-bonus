@@ -7,6 +7,7 @@ This repo is for the exploration of how I can make use of my Beelink GTR9 Pro wi
 - **[SPECS.md](SPECS.md)** - Full hardware specification sheet with LLM inference benchmarks
 - **[MONETIZATION.md](MONETIZATION.md)** - Research on niche monetization strategies leveraging the Beelink's unique capabilities
 - **[REGIONAL-MARKETS.md](REGIONAL-MARKETS.md)** - Oberpfalz/Franken (DE) & Rural Japan (JP) market research, synthetic data sales channels, and go-to-market playbook
+- **[SYNTHETIC-DATA-BUSINESS.md](SYNTHETIC-DATA-BUSINESS.md)** - Deep dive on the synthetic data generation business: market, tools, pricing, where to sell, and PhD synergy
 
 > Plain text (.txt) versions of all documents are also available for mobile/universal readability.
 

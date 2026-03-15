@@ -1,0 +1,153 @@
+# ─────────────────────────────────────────────────────────────────
+# VilseckKI Data Source Discovery Schema
+# ─────────────────────────────────────────────────────────────────
+#
+# This schema defines the structure for evaluating new data source
+# opportunities and integrating them into the synth-factory.
+#
+# Usage:
+#   1. Copy this file as schemas/{domain}-{country}.yaml
+#   2. Fill in all fields from research
+#   3. Run: python evaluate_source.py schemas/{domain}-{country}.yaml
+#   4. If score > threshold, auto-generate config and scraper stubs
+#
+# The schema connects three systems:
+#   - court-scraper (flaw intelligence extraction)
+#   - synth-factory (document generation)
+#   - marketplace (packaging and distribution)
+#
+# ─────────────────────────────────────────────────────────────────
+
+# ── Source Identity ──────────────────────────────────────────────
+
+source_metadata:
+  domain: ""                              # Machine-readable tag (e.g., "financial_reporting")
+  domain_display: ""                      # Human-readable in source language
+  domain_en: ""                           # Human-readable English
+  country: ""                             # ISO 3166-1 alpha-2 (JP, DE, GB)
+  language: ""                            # ISO 639-1 (ja, de, en)
+  version: "1.0"
+  last_evaluated: ""                      # ISO date
+
+  primary_source:
+    name: ""                              # Database/website name
+    url: ""                               # Base URL
+    access_type: ""                       # api | scrape | download | fee_per_doc
+    api_endpoint: ""                      # If API available
+    authentication: "none"                # none | api_key | oauth | registration
+    rate_limit: ""                        # e.g., "10/minute" or "4s delay"
+    cost_per_unit: 0                      # In local currency, 0 = free
+    robots_txt_allows: true               # Whether robots.txt permits scraping
+    terms_allow_research: true            # Whether ToS permits academic research use
+
+  flaw_intelligence_source:
+    name: ""                              # Regulator, court, standards body
+    url: ""
+    access_type: ""                       # api | scrape | download
+    scraper_exists: false                 # Have we built a scraper for this?
+    scraper_path: ""                      # Path to scraper if exists
+    estimated_flaw_types: 0               # Expected distinct flaw categories
+    estimated_corpus_size: 0              # Accessible documents for flaw mining
+
+# ── Market Validation (The 12 Questions) ────────────────────────
+
+market_validation:
+  # Q1: Who is buying?
+  known_buyers: []                        # Named companies or organization types
+
+  # Q2: What are they paying?
+  estimated_price_per_unit: ""            # Per synthetic document
+  pricing_model: ""                       # per_doc | per_dataset | subscription
+
+  # Q3: What format?
+  required_format: "jsonl"                # jsonl | xbrl | pdf | pairs | csv
+
+  # Q4: What quality threshold?
+  quality_threshold: ""                   # What makes or breaks quality
+
+  # Q5: How much data?
+  volume_needed: ""                       # Documents per dataset release
+
+  # Q6: Existing benchmarks?
+  existing_benchmark: ""                  # Name + year if exists
+  benchmark_url: ""
+
+  # Q7: Current best alternative?
+  current_alternative: ""
+
+  # Q8: Alternative cost?
+  alternative_cost_per_unit: ""           # What they're paying now
+
+  # Q9: Regulatory driver?
+  regulatory_driver: ""                   # What regulation creates urgency
+
+  # Q10: Can we access flaw intelligence?
+  flaw_intelligence_accessible: true
+
+  # Q11: Structural variation?
+  structural_variation: "medium"          # low | medium | high
+
+  # Q12: Beelink feasible?
+  beelink_feasible: true
+  estimated_tokens_per_doc: 0             # For Beelink capacity planning
+
+  # Composite scores
+  demand_confidence: 0.0                  # 0-1 scale
+  competition_level: "low"                # none | low | medium | high
+  time_to_first_sale: ""                  # Estimated calendar time
+
+# ── Document Architecture ───────────────────────────────────────
+# Maps directly to synth-factory config schema
+
+document_architecture:
+  typical_length_pages: 0
+  typical_token_count: 0
+
+  # Segment definitions — each becomes a segment in the YAML config
+  segments: []
+  # Example segment:
+  # - name: "section_name"
+  #   description: "Human-readable description"
+  #   typical_length: 3000                # Target token count
+  #   required_fields:
+  #     - "field_1"
+  #     - "field_2"
+  #   flaw_prone_fields:
+  #     - field: "field_1"
+  #       common_flaw: "flaw_type_tag"
+  #       estimated_frequency: 0.15
+
+# ── Flaw Taxonomy ───────────────────────────────────────────────
+# Populated from intelligence source scraping
+# Connects scraper output → synth-factory error injection
+
+flaw_taxonomy:
+  source: ""                              # Which intelligence source
+  taxonomy_file: ""                       # Path to generated taxonomy JSON
+  last_updated: null
+
+  # Pre-populated known categories (from research)
+  known_categories: []
+  # Example:
+  # - type: "flaw_tag"
+  #   description: "What this flaw looks like"
+  #   estimated_frequency: 0.15           # How often it occurs (0-1)
+  #   severity: "high"                    # low | medium | high
+  #   section: "which_segment"            # Which document segment it appears in
+
+# ── Integration ─────────────────────────────────────────────────
+# How this plugs into existing synth-factory infrastructure
+
+integration:
+  config_template: ""                     # Path to generated YAML config
+  generator_compatible: true              # Uses document_generator.py
+  validator_compatible: true              # Uses document_validator.py
+  packager_format: "jsonl_zip"            # jsonl_zip | csv | xbrl
+
+  new_components_needed: []               # Files that must be created
+  reused_components:                      # Files reused from existing architecture
+    - "generators/document_generator.py"
+    - "validators/document_validator.py"
+    - "packagers/dataset_packager.py"
+    - "run.py"
+    - "run.sh"

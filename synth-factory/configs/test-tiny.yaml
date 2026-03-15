@@ -1,0 +1,81 @@
+# ============================================================================
+# Tiny test config — 100 records, no LLM, for verifying the pipeline works
+# Run: python run.py configs/test-tiny.yaml --skip-llm
+# ============================================================================
+
+metadata:
+  name: "test-tiny"
+  version: "0.0.1"
+  description: "Minimal test dataset to verify the pipeline"
+  language: "de"
+  license: "CC-BY-4.0"
+  author: "ML Upskill Agents UG"
+  contact: "workflow.tools@icloud.com"
+  tags: ["test"]
+  intended_uses: ["Pipeline verification"]
+
+tables:
+  - name: test_companies
+    description: "100 test companies"
+    records: 100
+    columns:
+      - name: id
+        type: id
+        prefix: "TEST-"
+        sequential: true
+        unique: true
+
+      - name: name
+        type: text
+        generator: faker
+        faker:
+          provider: "company"
+          locale: "de_DE"
+
+      - name: rechtsform
+        type: categorical
+        values: ["GmbH", "e.K.", "UG (haftungsbeschränkt)", "GmbH & Co. KG"]
+        weights: [0.45, 0.25, 0.15, 0.15]
+
+      - name: umsatz
+        type: numeric
+        distribution: lognormal
+        dist_params:
+          mean: 13.0
+          std: 1.5
+          min: 10000
+          max: 50000000
+        decimals: 0
+
+      - name: mitarbeiter
+        type: numeric
+        distribution: lognormal
+        dist_params:
+          mean: 2.5
+          std: 1.2
+          min: 1
+          max: 500
+        decimals: 0
+
+      - name: branche
+        type: categorical
+        values: ["IT", "Maschinenbau", "Handel", "Handwerk", "Bau"]
+        weights: [0.20, 0.20, 0.25, 0.20, 0.15]
+
+generation:
+  method: gaussian_copula
+
+validation:
+  enabled: true
+  test_presets:
+    - data_quality
+  custom_checks:
+    - rechtsform_consistent
+  min_quality_score: 0.5
+
+packaging:
+  preview_rows: 20
+  output_csv: true
+  output_parquet: false
+  generate_datasheet: true
+  create_zip: false

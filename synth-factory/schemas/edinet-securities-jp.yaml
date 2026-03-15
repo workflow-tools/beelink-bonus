@@ -1,0 +1,283 @@
+# ─────────────────────────────────────────────────────────────────
+# VilseckKI Data Source Evaluation: EDINET Securities Reports
+# ─────────────────────────────────────────────────────────────────
+#
+# Filled-in schema for EDINET 有価証券報告書 (annual securities reports).
+# This is the #1 priority expansion target identified in the Japanese
+# Data Opportunities research.
+#
+# STATUS: Scraper built, config created, flaw extractor implemented
+# NEXT: Deploy to Beelink, register for API key, begin Phase 1 scraping
+#
+# ─────────────────────────────────────────────────────────────────
+
+# ── Source Identity ──────────────────────────────────────────────
+
+source_metadata:
+  domain: "financial_reporting"
+  domain_display: "有価証券報告書"
+  domain_en: "Securities Reports (Annual Financial Filings)"
+  country: "JP"
+  language: "ja"
+  version: "1.0"
+  last_evaluated: "2026-03-15"
+
+  primary_source:
+    name: "EDINET (Electronic Disclosure for Investors' NETwork)"
+    url: "https://disclosure.edinet-fsa.go.jp"
+    access_type: "api"
+    api_endpoint: "https://api.edinet-fsa.go.jp/api/v2"
+    authentication: "api_key"          # Free Subscription-Key via registration
+    rate_limit: "conservative 1/sec (official limit undocumented)"
+    cost_per_unit: 0                   # Completely free
+    robots_txt_allows: true
+    terms_allow_research: true         # Government-operated, research-friendly
+
+  flaw_intelligence_source:
+    name: "FSA Enforcement Actions + EDINET Amendment Filings"
+    url: "https://www.fsa.go.jp/sesc/english/index.htm"
+    access_type: "scrape"
+    scraper_exists: true
+    scraper_path: "scrapers/edinet/flaw_extractor.py"
+    estimated_flaw_types: 15           # 6 top-level categories, ~15 subtypes
+    estimated_corpus_size: 5000        # Annual reports per year × 10 years
+
+# ── Market Validation (The 12 Questions) ────────────────────────
+
+market_validation:
+  # Q1: Who is buying?
+  known_buyers:
+    - "AI/NLP research labs (SakanaAI, Preferred Networks, RIKEN AIP)"
+    - "RegTech companies (compliance document validation)"
+    - "Financial data vendors (Bloomberg, Refinitiv, QUICK Corp)"
+    - "Accounting/audit firms (Big 4 Japan offices)"
+    - "Fintech startups building document processing pipelines"
+
+  # Q2: What are they paying?
+  estimated_price_per_unit: "¥50-200 per synthetic document (volume-dependent)"
+  pricing_model: "per_dataset"         # Dataset releases, not individual docs
+
+  # Q3: What format?
+  required_format: "jsonl"             # JSONL with segment-level structure
+
+  # Q4: What quality threshold?
+  quality_threshold: >
+    Segment-level structural fidelity (FSA section ordering), cross-section
+    numerical coherence (MD&A figures match company overview), authentic
+    Japanese financial prose (not obviously LLM-generated), domain-specific
+    error patterns that match real filing deficiencies.
+
+  # Q5: How much data?
+  volume_needed: "500-5000 documents per dataset release"
+
+  # Q6: Existing benchmarks?
+  existing_benchmark: "SakanaAI EDINET-Bench (2024)"
+  benchmark_url: "https://huggingface.co/datasets/SakanaAI/EDINET-Bench"
+
+  # Q7: Current best alternative?
+  current_alternative: >
+    Raw EDINET filings (real data, privacy/licensing concerns for training),
+    hand-curated subsets, no known synthetic alternative at scale.
+
+  # Q8: Alternative cost?
+  alternative_cost_per_unit: >
+    Free (raw EDINET) but requires significant preprocessing, and
+    real data has compliance risks for training. Commercial financial
+    data costs $10K-100K/year from vendors like Bloomberg.
+
+  # Q9: Regulatory driver?
+  regulatory_driver: >
+    Japan's DX (Digital Transformation) initiatives, FSA push for XBRL/iXBRL
+    standardization, increasing demand for Japanese-language AI models
+    that understand financial documents for compliance automation.
+
+  # Q10: Can we access flaw intelligence?
+  flaw_intelligence_accessible: true   # FSA enforcement + amendment filings
+
+  # Q11: Structural variation?
+  structural_variation: "high"         # 8+ segments, variable lengths, tables
+
+  # Q12: Beelink feasible?
+  beelink_feasible: true
+  estimated_tokens_per_doc: 12000      # ~8 segments × 1500 avg tokens
+
+  # Composite scores
+  demand_confidence: 0.85
+  competition_level: "low"             # No known synthetic Japanese financial data at scale
+  time_to_first_sale: "4-6 weeks"      # API key + scrape + generate + package
+
+# ── Document Architecture ───────────────────────────────────────
+
+document_architecture:
+  typical_length_pages: 80             # 50-120 pages typical
+  typical_token_count: 12000           # Synthetic version (narrative sections only)
+
+  segments:
+    - name: "company_overview"
+      description: "Company name, history, business description, key indicators"
+      typical_length: 1500
+      required_fields:
+        - "会社名"
+        - "設立年月日"
+        - "事業の内容"
+        - "主要な経営指標"
+        - "沿革"
+      flaw_prone_fields:
+        - field: "主要な経営指標"
+          common_flaw: "numerical.stale_data"
+          estimated_frequency: 0.05
+
+    - name: "business_status"
+      description: "Management policies, strategy, KPIs"
+      typical_length: 1200
+      required_fields:
+        - "経営方針"
+        - "対処すべき課題"
+        - "経営指標"
+      flaw_prone_fields:
+        - field: "経営方針"
+          common_flaw: "disclosure.generic_language"
+          estimated_frequency: 0.15
+
+    - name: "business_risks"
+      description: "Material risk factors"
+      typical_length: 2000
+      required_fields:
+        - "事業固有リスク"
+        - "市場リスク"
+        - "規制リスク"
+      flaw_prone_fields:
+        - field: "事業固有リスク"
+          common_flaw: "disclosure.boilerplate_risk"
+          estimated_frequency: 0.30
+        - field: "全体"
+          common_flaw: "disclosure.generic_language"
+          estimated_frequency: 0.20
+
+    - name: "md_and_a"
+      description: "Management Discussion & Analysis"
+      typical_length: 2000
+      required_fields:
+        - "経営成績の概況"
+        - "財政状態の分析"
+        - "キャッシュ・フロー"
+      flaw_prone_fields:
+        - field: "数値整合性"
+          common_flaw: "numerical.inconsistent_figures"
+          estimated_frequency: 0.08
+
+    - name: "corporate_governance"
+      description: "Governance structure, board, compliance"
+      typical_length: 1500
+      required_fields:
+        - "ガバナンス体制"
+        - "社外取締役"
+        - "内部統制"
+      flaw_prone_fields:
+        - field: "開示内容"
+          common_flaw: "regulatory.sustainability_disclosure"
+          estimated_frequency: 0.10
+
+    - name: "stock_info"
+      description: "Share capital, major shareholders"
+      typical_length: 1000
+      required_fields:
+        - "発行済株式"
+        - "大株主"
+
+    - name: "directors"
+      description: "Board members and key officers"
+      typical_length: 1500
+      required_fields:
+        - "氏名"
+        - "略歴"
+        - "役職"
+
+    - name: "financial_highlights"
+      description: "Accounting policies and financial statement summary"
+      typical_length: 1500
+      required_fields:
+        - "会計方針"
+        - "見積り"
+
+# ── Flaw Taxonomy ───────────────────────────────────────────────
+
+flaw_taxonomy:
+  source: "FSA enforcement + EDINET amendments + pattern analysis"
+  taxonomy_file: "output/scraped/edinet/flaw_taxonomy.json"
+  last_updated: null                   # Populated after first scrape run
+
+  known_categories:
+    - type: "structural.empty_section"
+      description: "Section marked N/A (該当事項はありません) without justification"
+      estimated_frequency: 0.12
+      severity: "low"
+      section: "facilities"
+
+    - type: "structural.missing_section"
+      description: "Expected section not present in filing"
+      estimated_frequency: 0.03
+      severity: "high"
+      section: "any"
+
+    - type: "disclosure.boilerplate_risk"
+      description: "Generic risk factors without company-specific details"
+      estimated_frequency: 0.30
+      severity: "medium"
+      section: "business_risks"
+
+    - type: "disclosure.generic_language"
+      description: "Vague language (一般的に) lacking specificity"
+      estimated_frequency: 0.20
+      severity: "medium"
+      section: "business_risks"
+
+    - type: "numerical.inconsistent_figures"
+      description: "Numbers don't match across sections"
+      estimated_frequency: 0.05
+      severity: "high"
+      section: "md_and_a"
+
+    - type: "formatting.garbled_symbols"
+      description: "Encoding artifacts from PDF/XBRL extraction"
+      estimated_frequency: 0.02
+      severity: "high"
+      section: "any"
+
+    - type: "regulatory.sustainability_disclosure"
+      description: "Missing/weak ESG/sustainability disclosure (required since 2023)"
+      estimated_frequency: 0.15
+      severity: "medium"
+      section: "corporate_governance"
+
+    - type: "temporal.stale_reference"
+      description: "References previous period without updated specifics"
+      estimated_frequency: 0.10
+      severity: "medium"
+      section: "business_status"
+
+# ── Integration ─────────────────────────────────────────────────
+
+integration:
+  config_template: "configs/securities-report-jp.yaml"
+  generator_compatible: true
+  validator_compatible: true
+  packager_format: "jsonl_zip"
+
+  new_components_needed:
+    - "scrapers/edinet/edinet_client.py"       # ✅ BUILT
+    - "scrapers/edinet/edinet_scraper.py"      # ✅ BUILT
+    - "scrapers/edinet/edinet_parser.py"       # ✅ BUILT
+    - "scrapers/edinet/flaw_extractor.py"      # ✅ BUILT
+    - "scrapers/base/base_scraper.py"          # ✅ BUILT
+    - "configs/securities-report-jp.yaml"      # ✅ BUILT
+    - "tests/scrapers/*"                       # ✅ BUILT (56 tests)
+
+  reused_components:
+    - "generators/document_generator.py"
+    - "generators/config_schema.py"
+    - "generators/config_loader.py"
+    - "validators/document_validator.py"
+    - "packagers/dataset_packager.py"
+    - "run.py"
+    - "run.sh"

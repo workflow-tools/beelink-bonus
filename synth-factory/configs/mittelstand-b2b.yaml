@@ -1,0 +1,392 @@
+# ============================================================================
+# Synthetic Bavarian Mittelstand B2B Dataset
+# ============================================================================
+#
+# First dataset to generate and list on Datarade + HuggingFace.
+#
+# Distribution parameters sourced from:
+# - Statistisches Bundesamt Unternehmensregister 2024
+# - KfW Mittelstandspanel 2024
+# - IfM Bonn SME statistics
+# - Bayerisches Landesamt für Statistik
+#
+# Run:  python run.py configs/mittelstand-b2b.yaml
+# Test: python run.py configs/mittelstand-b2b.yaml --skip-llm  (tabular only)
+# ============================================================================
+
+metadata:
+  name: "synthetic-bavarian-mittelstand-b2b"
+  version: "1.0.0"
+  description: >
+    Synthetic dataset of 50,000 German Mittelstand (SME) companies with
+    realistic Bavarian geographic distribution, industry composition,
+    financial profiles, and German-language free-text fields. Designed for
+    AI/ML development, ERP system testing, and EU AI Act compliance testing.
+    All data is entirely synthetic — no real companies are represented.
+  language: "de"
+  license: "CC-BY-4.0"
+  author: "ML Upskill Agents UG"
+  contact: "workflow.tools@icloud.com"
+  tags:
+    - synthetic-data
+    - german
+    - mittelstand
+    - sme
+    - bavaria
+    - eu-ai-act
+    - tabular
+    - b2b
+  intended_uses:
+    - AI/ML model development and testing with realistic German business data
+    - ERP and procurement system integration testing
+    - EU AI Act compliance stress-testing (demographic representativeness)
+    - Academic research on German SME structures
+    - Software demo data for German-market B2B products
+  out_of_scope_uses:
+    - Must NOT be represented or used as real company data
+    - Not suitable for credit decisions or financial risk assessment
+    - Not a substitute for official Bundesbank or Destatis statistics
+
+# ============================================================================
+# TABLES
+# ============================================================================
+
+tables:
+
+  # ─── Companies ──────────────────────────────────────────────────
+  - name: companies
+    description: "Core company records with demographics and financials"
+    records: 50000
+    columns:
+
+      - name: company_id
+        type: id
+        description: "Unique company identifier"
+        prefix: "DE-"
+        sequential: true
+        unique: true
+
+      - name: firma_name
+        type: text
+        description: "German company name (LLM-generated)"
+        generator: ollama
+        ollama:
+          model: "llama3.1:70b-instruct-q4_K_M"
+          prompt: >
+            Generate ONE realistic German Mittelstand company name for a company
+            in the {branche} sector located in {bundesland}. The company's legal
+            form is {rechtsform}. Return ONLY the company name including the
+            legal form suffix. No explanation, no quotes, just the name.
+            Examples: Müller Präzisionstechnik GmbH, Bayerische Holzwerke e.K.,
+            Schmitt & Söhne Metallbau GmbH & Co. KG
+          temperature: 0.9
+          max_tokens: 30
+          context_columns:
+            - branche
+            - bundesland
+            - rechtsform
+
+      - name: rechtsform
+        type: categorical
+        description: "Legal form (from Destatis Unternehmensregister 2024)"
+        values:
+          - "GmbH"
+          - "e.K."
+          - "UG (haftungsbeschränkt)"
+          - "GmbH & Co. KG"
+          - "OHG"
+          - "AG"
+          - "GbR"
+        weights:
+          - 0.40    # GmbH: dominant SME form
+          - 0.25    # e.K.: sole proprietorships
+          - 0.12    # UG: mini-GmbH, growing
+          - 0.10    # GmbH & Co. KG: family businesses
+          - 0.05    # OHG: partnerships
+          - 0.03    # AG: rare for SMEs
+          - 0.05    # GbR: small partnerships
+
+      - name: branche
+        type: categorical
+        description: "Industry sector (from KfW Mittelstandspanel 2024)"
+        values:
+          - "IT-Dienstleistungen"
+          - "Maschinenbau"
+          - "Elektrotechnik"
+          - "Automotive-Zulieferer"
+          - "Handwerk"
+          - "Logistik & Transport"
+          - "Handel"
+          - "Baugewerbe"
+          - "Gastronomie & Hotellerie"
+          - "Gesundheitswesen"
+          - "Beratung & Consulting"
+          - "Landwirtschaft"
+        weights:
+          - 0.12    # IT
+          - 0.10    # Maschinenbau
+          - 0.06    # Elektrotechnik
+          - 0.05    # Automotive
+          - 0.15    # Handwerk (largest SME sector)
+          - 0.08    # Logistik
+          - 0.14    # Handel
+          - 0.10    # Bau
+          - 0.06    # Gastro
+          - 0.05    # Gesundheit
+          - 0.06    # Beratung
+          - 0.03    # Landwirtschaft
+
+      - name: bundesland
+        type: categorical
+        description: "Federal state (weighted toward Bavaria per project focus)"
+        values:
+          - "Bayern"
+          - "Baden-Württemberg"
+          - "Nordrhein-Westfalen"
+          - "Hessen"
+          - "Niedersachsen"
+          - "Sachsen"
+          - "Berlin"
+          - "Hamburg"
+          - "Rheinland-Pfalz"
+          - "Schleswig-Holstein"
+          - "Thüringen"
+          - "Brandenburg"
+          - "Sachsen-Anhalt"
+          - "Mecklenburg-Vorpommern"
+          - "Bremen"
+          - "Saarland"
+        weights:
+          - 0.30    # Bayern (overweighted for Bavarian focus dataset)
+          - 0.15    # BaWü
+          - 0.14    # NRW
+          - 0.08    # Hessen
+          - 0.07    # Niedersachsen
+          - 0.05    # Sachsen
+          - 0.04    # Berlin
+          - 0.03    # Hamburg
+          - 0.03    # RLP
+          - 0.02    # SH
+          - 0.02    # Thüringen
+          - 0.02    # Brandenburg
+          - 0.02    # Sachsen-Anhalt
+          - 0.01    # MV
+          - 0.01    # Bremen
+          - 0.01    # Saarland
+
+      - name: plz
+        type: text
+        description: "5-digit German postal code (sampled from real PLZ list)"
+        generator: weighted_sample
+        sample_source: "german_plz.csv"
+
+      - name: ort
+        type: text
+        description: "City name (sampled alongside PLZ)"
+        generator: weighted_sample
+        sample_source: "german_staedte.csv"
+
+      - name: gruendungsjahr
+        type: numeric
+        description: "Year of establishment"
+        distribution: normal
+        dist_params:
+          mean: 2005
+          std: 15
+          min: 1950
+          max: 2025
+        decimals: 0
+
+      - name: mitarbeiter_anzahl
+        type: numeric
+        description: "Employee count (lognormal, centered ~33, 84% under 10)"
+        distribution: lognormal
+        dist_params:
+          mean: 2.0
+          std: 1.5
+          min: 1
+          max: 5000
+        decimals: 0
+
+      - name: jahresumsatz_eur
+        type: numeric
+        description: "Annual revenue in EUR (lognormal, centered ~EUR 800K)"
+        distribution: lognormal
+        dist_params:
+          mean: 13.5
+          std: 1.8
+          min: 22000      # Below Umsatzsteuer threshold is unrealistic for registered companies
+          max: 500000000   # EUR 500M cap for Mittelstand
+        decimals: 0
+
+      - name: website
+        type: text
+        description: "Company website URL"
+        generator: template
+        template: "https://www.{firma_name_slug}.de"
+
+      - name: kurzbeschreibung
+        type: text
+        description: "Short company description in German (LLM-generated)"
+        generator: ollama
+        ollama:
+          model: "mistral:7b-instruct-q4_K_M"
+          prompt: >
+            Write a one-sentence German company description for a {branche}
+            company called {firma_name} with {mitarbeiter_anzahl} employees in
+            {ort}, {bundesland}. Write in German, professional tone, max 25 words.
+            Return ONLY the description, no quotes.
+          temperature: 0.7
+          max_tokens: 60
+          context_columns:
+            - branche
+            - firma_name
+            - mitarbeiter_anzahl
+            - ort
+            - bundesland
+
+  # ─── Transactions ───────────────────────────────────────────────
+  - name: transactions
+    description: "B2B transactions between companies"
+    records: 200000
+    foreign_keys:
+      - column: sender_company_id
+        references_table: companies
+        references_column: company_id
+      - column: receiver_company_id
+        references_table: companies
+        references_column: company_id
+    columns:
+
+      - name: transaction_id
+        type: id
+        description: "Unique transaction identifier"
+        prefix: "TXN-"
+        sequential: true
+        unique: true
+
+      - name: sender_company_id
+        type: text
+        description: "Sending company (foreign key)"
+
+      - name: receiver_company_id
+        type: text
+        description: "Receiving company (foreign key)"
+
+      - name: transaction_type
+        type: categorical
+        description: "Type of B2B transaction"
+        values:
+          - "Rechnung"
+          - "Bestellung"
+          - "Gutschrift"
+          - "Anzahlung"
+          - "Schlussrechnung"
+        weights:
+          - 0.45
+          - 0.30
+          - 0.10
+          - 0.08
+          - 0.07
+
+      - name: betrag_eur
+        type: numeric
+        description: "Transaction amount in EUR"
+        distribution: lognormal
+        dist_params:
+          mean: 8.5
+          std: 1.5
+          min: 50
+          max: 2000000
+        decimals: 2
+
+      - name: mwst_satz
+        type: categorical
+        description: "VAT rate"
+        values:
+          - 0.19
+          - 0.07
+          - 0.00
+        weights:
+          - 0.80
+          - 0.15
+          - 0.05
+
+      - name: datum
+        type: datetime
+        description: "Transaction date"
+        start_date: "2022-01-01"
+        end_date: "2026-03-01"
+
+      - name: zahlungsziel_tage
+        type: categorical
+        description: "Payment terms in days"
+        values:
+          - 14
+          - 30
+          - 45
+          - 60
+          - 90
+        weights:
+          - 0.15
+          - 0.45
+          - 0.15
+          - 0.15
+          - 0.10
+
+      - name: rechnungstext
+        type: text
+        description: "Invoice line item description in German"
+        generator: ollama
+        ollama:
+          model: "mistral:7b-instruct-q4_K_M"
+          prompt: >
+            Generate a realistic one-line German invoice description (Rechnungstext)
+            for a B2B {transaction_type} in the amount of EUR {betrag_eur}.
+            Write in German business language, max 15 words.
+            Examples: "Wartungsvertrag Q3 2025 — 3 Maschinensätze",
+            "Lieferung Edelstahlrohre DN50, 200 Stück".
+            Return ONLY the description.
+          temperature: 0.8
+          max_tokens: 40
+          context_columns:
+            - transaction_type
+            - betrag_eur
+
+# ============================================================================
+# GENERATION SETTINGS
+# ============================================================================
+
+generation:
+  method: gaussian_copula     # Fast, good for first pass. Switch to ctgan for v2.
+  epochs: 300                 # Only used if method is ctgan/tvae
+  batch_size: 500
+  ollama_concurrent: 2        # 2 parallel Ollama calls (memory-safe on 128GB)
+  ollama_base_url: "http://localhost:11434"
+  ollama_default_model: "llama3.1:70b-instruct-q4_K_M"
+
+# ============================================================================
+# VALIDATION SETTINGS
+# ============================================================================
+
+validation:
+  enabled: true
+  test_presets:
+    - data_quality
+  custom_checks:
+    - german_plz_valid
+    - rechtsform_consistent
+  min_quality_score: 0.7
+  generate_html_report: true
+
+# ============================================================================
+# PACKAGING SETTINGS
+# ============================================================================
+
+packaging:
+  preview_rows: 100
+  output_csv: true
+  output_parquet: true
+  generate_datasheet: true
+  generate_schema: true
+  create_zip: true

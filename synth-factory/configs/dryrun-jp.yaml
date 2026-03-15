@@ -1,0 +1,115 @@
+# ============================================================================
+# DRY RUN — Quick test config (5 documents)
+# ============================================================================
+#
+# Use this to verify the pipeline works end-to-end before committing
+# to a multi-day generation run.
+#
+# Usage:
+#   ./run.sh dryrun-jp --foreground
+#   python run.py configs/dryrun-jp.yaml
+#
+# Expected time: ~5-10 minutes on 70B model
+# ============================================================================
+
+metadata:
+  name: "dryrun-housing-jp"
+  version: "0.1.0"
+  description: >
+    Dry-run test: 5 Japanese housing management application forms.
+    Used to validate pipeline before full production run.
+  language: "ja"
+  license: "CC-BY-4.0"
+  author: "ML Upskill Agents UG"
+  contact: "workflow.tools@icloud.com"
+  tags:
+    - dryrun
+    - test
+
+document_types:
+  - name: housing_application_jp
+    description: "Minimal housing form for pipeline testing"
+    language: ja
+    format: markdown
+    preamble: "# 住宅管理申請書（テスト）\n\n**申請番号:** {document_id}\n"
+    error_injection_rate: 0.2  # 20% error rate for testing error injection
+
+    segments:
+      - name: personal_details
+        segment_type: form_field
+        label: "1. 申請者情報"
+        prompt: >
+          あなたは日本の住宅管理事務所の職員です。
+          架空の申請者の個人情報を生成してください：
+          氏名（漢字とフリガナ）、生年月日、現住所、電話番号。
+          フォーマット：各項目をラベル付きで記載してください。
+        system_prompt: >
+          架空のデータですが現実的な日本語で作成してください。
+        temperature: 0.75
+        max_tokens: 250
+        min_length: 80
+        max_length: 500
+
+      - name: residence_history
+        segment_type: list_field
+        label: "2. 住居履歴"
+        prompt: >
+          住居履歴の{item_number}番目の項目を作成してください。
+          申請者情報：{personal_details}
+          これまでの住居履歴：{residence_history}
+          住所、入居日、退去日、住居形態、家賃を含めてください。
+        system_prompt: >
+          申請者の個人情報と矛盾しないように注意してください。
+        temperature: 0.75
+        max_tokens: 150
+        list_min: 1
+        list_max: 2
+        context_dependencies:
+          - personal_details
+        min_length: 40
+        max_length: 300
+
+      - name: employment
+        segment_type: section
+        label: "3. 雇用情報"
+        prompt: >
+          雇用情報セクションを作成してください。
+          申請者情報：{personal_details}
+          勤務先名称、業種、年収を含めてください。
+        system_prompt: >
+          申請者の年齢と整合性を持たせてください。
+        temperature: 0.7
+        max_tokens: 250
+        context_dependencies:
+          - personal_details
+          - residence_history
+        min_length: 60
+        max_length: 400
+
+document_tables:
+  - name: dryrun_housing
+    description: "5 test documents"
+    records: 5
+    document_type: housing_application_jp
+
+generation:
+  ollama_concurrent: 1
+  ollama_base_url: "http://localhost:11434"
+  ollama_default_model: "llama3.1:70b-instruct-q4_K_M"
+
+validation:
+  enabled: true
+  document_validators:
+    - language_detection
+    - structural_completeness
+    - segment_length_check
+  min_quality_score: 0.6  # Lower threshold for dry-run
+
+packaging:
+  preview_rows: 5
+  output_csv: false
+  output_parquet: false
+  output_jsonl: true
+  generate_datasheet: false
+  generate_schema: true
+  create_zip: false

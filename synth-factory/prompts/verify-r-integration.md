@@ -49,7 +49,7 @@ The pipeline also targets German-language documents (Mittelstand B2B). Is R simi
 
 ### Integration Architecture
 
-I plan to call R from Python using subprocess or `rpy2`. Which approach is more reliable for a production pipeline running on a dedicated Linux server (Beelink GTR9 Pro)?
+I plan to call R from Python using subprocess or `rpy2`. Which approach is more reliable for a production pipeline running on the Beelink GTR9 Pro (currently Windows 11, may migrate to Linux later)?
 
 ### Dissertation Relevance
 
@@ -69,7 +69,7 @@ I'm pursuing a PhD in Computer Science at FAU. Could an R validation layer for s
 
 ## My Setup
 
-- **Generation:** Python 3.10, Ollama, httpx, pydantic, on Beelink GTR9 Pro (Linux)
+- **Generation:** Python 3.10, Ollama, httpx, pydantic, on Beelink GTR9 Pro (Windows 11)
 - **Target output:** JSONL with document_id, document_content, seg_company_overview, seg_business_status, etc.
 - **Flaw taxonomy:** JSON with flaw_type, flaw_subtype, segment, frequency, severity, examples
 - **Current validation:** Python-based (document_validator.py) doing structural checks, language detection, segment length checks

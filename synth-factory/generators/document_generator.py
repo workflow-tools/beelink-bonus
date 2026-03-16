@@ -414,8 +414,8 @@ class DocumentGenerator:
     def __init__(
         self,
         base_url: str = "http://localhost:11434",
-        max_concurrent: int = 2,
-        timeout: float = 180.0,
+        max_concurrent: int = 4,
+        timeout: float = 90.0,
         max_retries: int = 3,
         taxonomy_path: Optional[str] = None,
     ):

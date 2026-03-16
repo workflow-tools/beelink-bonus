@@ -19,8 +19,8 @@ Each synthetic document has 8 sections generated segment-by-segment by a 70-bill
 You need one machine with a GPU that can run a 70B quantized model at acceptable speed:
 
 **Beelink GTR9 Pro** (or equivalent)
-- AMD Ryzen 9 7940HS
-- 64 GB RAM (minimum 32 GB for the 4-bit quantized model)
+- AMD Ryzen AI Max+ 395 (16c/32t Zen 5, RDNA 3.5 GPU with 40 CUs)
+- 128 GB unified LPDDR5X (up to 96GB allocable as VRAM)
 - Ollama installed and running
 
 ```bash
@@ -281,7 +281,7 @@ curl http://localhost:11434/api/tags  # Test API
 ```
 
 **"Generation is slow"**
-- The 70B model on CPU-only is ~5 min/segment. With GPU offloading, 1-2 min/segment.
+- The 70B model with ROCm GPU offload: ~30-60 sec/segment (12-20 tok/s). CPU-only fallback: ~2-5 min/segment.
 - Use `--config configs/test-tiny.yaml` with a smaller model first.
 - Consider running overnight with `--batch-size 50` for checkpointed batches.
 

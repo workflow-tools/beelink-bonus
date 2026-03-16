@@ -14,9 +14,14 @@ export(inject_anomalies)
 
 # Visualization
 export(plot_quality_report)
+export(plot_advanced_quality)
+export(plot_fsa_verification_summary)
 
 # Export / interop
 export(export_to_hf_dataset)
+
+# Sample data for demos
+export(make_sample_data)
 
 # Citation
 export(edinetsynth_citation)
@@ -49,6 +54,18 @@ importFrom(ggplot2,theme_minimal)
 importFrom(ggplot2,theme)
 importFrom(ggplot2,element_text)
 importFrom(ggplot2,ggsave)
+importFrom(ggplot2,geom_tile)
+importFrom(ggplot2,geom_text)
+importFrom(ggplot2,geom_segment)
+importFrom(ggplot2,geom_hline)
+importFrom(ggplot2,annotate)
+importFrom(ggplot2,scale_fill_gradient2)
+importFrom(ggplot2,scale_fill_manual)
+importFrom(ggplot2,scale_y_continuous)
+importFrom(ggplot2,element_blank)
+importFrom(ggplot2,margin)
+importFrom(tidyr,complete)
+importFrom(dplyr,left_join)
 importFrom(rlang,.data)
 importFrom(stats,aov)
 importFrom(stats,median)

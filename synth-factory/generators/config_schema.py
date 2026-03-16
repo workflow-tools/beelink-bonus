@@ -256,15 +256,34 @@ class TableDef(BaseModel):
 # ─── Generation Settings ──────────────────────────────────────────
 
 class GenerationSettings(BaseModel):
-    """Configuration for the SDV generation step."""
+    """Configuration for the SDV generation step.
+
+    Hardware baseline: Beelink GTR9 Pro (AMD Ryzen AI Max+ 395, 128GB
+    unified LPDDR5X, RDNA 3.5 iGPU with up to 96GB allocable VRAM).
+    With ROCm GPU offload: 70B Q4_K_M → ~12-20 tok/s, 7B → 30-50+ tok/s.
+    Multiple 70B models can be loaded simultaneously (128GB fits 3×70B).
+    """
     method: GenerationMethod = GenerationMethod.GAUSSIAN_COPULA
     epochs: int = 300
     batch_size: int = 500
-    # Ollama concurrency for text augmentation
-    ollama_concurrent: int = 2
+    # Ollama concurrency for text augmentation.
+    # Beelink AI Max+ 395 (32 threads, GPU offload): safe at 4-6 for 70B,
+    # 8-12 for 7B models. Increase further if thermals allow.
+    ollama_concurrent: int = 4
     ollama_base_url: str = "http://localhost:11434"
     # Default model for text augmentation (can be overridden per column)
     ollama_default_model: str = "llama3.1:70b-instruct-q4_K_M"
+    # Maximum documents to generate in parallel (each doc is sequential
+    # internally due to section context dependencies, but independent
+    # documents can overlap). Set >1 when running multiple models or
+    # on hardware with spare throughput. Default 1 = sequential.
+    max_parallel_documents: int = 1
+    # Verifier model for inline QA (blind extraction). If set, each
+    # generated document is verified immediately using this model before
+    # proceeding to the next. Runs on same Ollama instance (use
+    # OLLAMA_MAX_LOADED_MODELS=2+ to keep both models in memory).
+    verifier_model: Optional[str] = None
+    verifier_endpoint: Optional[str] = None  # defaults to ollama_base_url
 
 
 # ─── Validation Settings ──────────────────────────────────────────

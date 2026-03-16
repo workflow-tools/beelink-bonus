@@ -59,7 +59,7 @@ This is the difference between "synthetic text" and "a benchmarking instrument."
 
 **Model heterogeneity on the Beelink:**
 
-The Beelink GTR9 Pro (64GB RAM) can run two different model families. For agricultural data: generate with Llama 3.3 70B, verify with Qwen 2.5 72B. Different architectures prevent correlated blind spots — if Llama fails to inject a flaw properly, Qwen is more likely to catch it than another Llama instance would be.
+The Beelink GTR9 Pro (128GB RAM) can run two different model families. For agricultural data: generate with Llama 3.3 70B, verify with Qwen 2.5 72B. Different architectures prevent correlated blind spots — if Llama fails to inject a flaw properly, Qwen is more likely to catch it than another Llama instance would be.
 
 **Implementation cost:** The five QA techniques are estimated at 10-14 hours total across the data factory, and the agricultural product benefits from them at zero additional cost once they're built for any domain. The highest-impact single technique (blind extraction alone) takes ~3 hours and catches the most critical failure mode: flaws that were requested but didn't manifest.
 

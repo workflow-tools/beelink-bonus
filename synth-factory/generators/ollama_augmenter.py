@@ -11,9 +11,15 @@ The augmenter:
 4. Calls the local Ollama API with concurrency control
 5. Replaces placeholder values with generated text
 
-This is the slow step — a 70B model generates ~8-15 tok/s on the Beelink.
-Budget ~2-5 seconds per cell. 50K rows × 3 text columns = ~40-80 hours on 70B.
-Use 7B for volume, 70B for premium quality.
+Performance on Beelink GTR9 Pro (AI Max+ 395, 128GB, RDNA 3.5 GPU):
+  - With ROCm GPU offload: 70B Q4_K_M → ~12-20 tok/s
+  - 7B models → 30-50+ tok/s
+  - Budget ~1-2 seconds per cell (100 tokens @ 15 tok/s).
+  - 50K rows × 3 text columns = ~10-20 hours on 70B with GPU.
+  - Use 7B for volume, 70B for premium quality.
+  - Multiple models can run concurrently (128GB fits 3× 70B).
+
+Without GPU (CPU-only fallback): 70B → ~5-8 tok/s, budget ~3-5 sec/cell.
 
 Extensibility: Add new augmentation strategies by subclassing BaseAugmenter.
 """
@@ -38,8 +44,8 @@ class OllamaAugmenter:
     def __init__(
         self,
         base_url: str = "http://localhost:11434",
-        max_concurrent: int = 2,
-        timeout: float = 120.0,
+        max_concurrent: int = 4,
+        timeout: float = 45.0,
         max_retries: int = 3,
     ):
         self.base_url = base_url.rstrip("/")

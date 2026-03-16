@@ -22,8 +22,9 @@
 #   - Segment-level context threading for cross-section coherence
 #   - Cannot be replicated without local LLM + EDINET API access
 #
-# Generation time estimate (70B, 1 concurrent):
-#   ~8 segments × ~90-120 sec/segment × 500 docs ≈ 4-7 days
+# Generation time estimate (70B Q4_K_M on GTR9 Pro w/ ROCm GPU offload):
+#   ~8 segments × ~30-60 sec/segment × 500 docs ≈ 1.4-2.8 days (1 concurrent)
+#   With max_parallel_documents=2: ≈ 0.7-1.4 days
 #
 # ============================================================================
 
@@ -379,9 +380,15 @@ document_tables:
 
 generation:
   method: gaussian_copula
-  ollama_concurrent: 1
+  # Document generation is sequential per-document (context threading),
+  # but with GPU-accelerated inference (12-20 tok/s on 70B), we can
+  # push concurrent to 2 for overlapping independent documents.
+  ollama_concurrent: 2
   ollama_base_url: "http://localhost:11434"
   ollama_default_model: "llama3.1:70b-instruct-q4_K_M"
+  # Generate 2 documents in parallel — safe on 128GB with single 70B model.
+  # Increase to 3 only if thermals stay under 95°C sustained.
+  max_parallel_documents: 2
 
 
 # ============================================================================

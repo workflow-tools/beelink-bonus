@@ -1,0 +1,125 @@
+---
+title: "edinetsynth: Quick Start Guide"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{edinetsynth: Quick Start Guide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 10,
+  fig.height = 6,
+  out.width = "100%"
+)
+```
+
+## What is edinetsynth?
+
+`edinetsynth` is the companion R package for VilseckKI synthetic EDINET datasets
+-- quality-tiered Japanese securities reports (有価証券報告書) with verified
+FSA compliance flaws.
+
+This vignette demonstrates the full evaluation pipeline using built-in sample
+data. No external files needed.
+
+## Step 1: Generate sample data
+
+```{r load}
+library(edinetsynth)
+
+# Built-in sample data generator (50 documents, 4 quality tiers)
+reports <- make_sample_data(n = 50)
+cat("Documents:", nrow(reports), "\n")
+cat("Columns:", paste(names(reports), collapse = ", "), "\n")
+```
+
+## Step 2: Inspect segment statistics
+
+Each document has 8 sections matching real 有価証券報告書 structure.
+
+```{r segments}
+stats <- segment_summary(reports)
+print(stats)
+```
+
+## Step 3: Check quality tier distribution
+
+The dataset uses a 4-tier system: perfect (80%), near (10%), moderate (8%),
+severe (2%). Higher tiers contain progressively more FSA compliance flaws.
+
+```{r tiers}
+tiers <- compare_tiers(reports)
+print(tiers)
+```
+
+## Step 4: Detect flaws
+
+`detect_flaws()` runs heuristic anomaly detectors. In a real dataset, flaws
+are *planted deliberately* in Tier 2-4 documents and verified via triangulated
+QA (keyword detection + LLM blind extraction).
+
+```{r flaws}
+flaws <- detect_flaws(reports)
+cat("Total flaws detected:", nrow(flaws), "\n")
+if (nrow(flaws) > 0) {
+  print(table(flaws$flaw_type, flaws$severity))
+}
+```
+
+## Step 5: Extract segments for NLP
+
+Feed individual sections directly into your tokenizer or fine-tuning pipeline.
+
+```{r extract}
+risks <- extract_segment(reports, "business_risks", with_id = TRUE)
+cat("Non-empty risk sections:", sum(nchar(as.character(risks[[2]])) > 0),
+    "/", nrow(risks), "\n")
+```
+
+## Step 6: Generate marketplace visualizations
+
+```{r plots, eval = FALSE}
+# Generates PNG files in the specified directory
+plot_quality_report(reports, output_dir = "eval_plots/")
+plot_advanced_quality(reports, output_dir = "eval_plots/")
+
+# The "money shot" -- FSA verification summary (uses sample data)
+plot_fsa_verification_summary(output_path = "eval_plots/fsa_summary.png")
+```
+
+## Step 7: Export to HuggingFace format
+
+```{r export, eval = FALSE}
+export_to_hf_dataset(
+  reports,
+  output_dir = "hf_export/",
+  stratify_by = "quality_tier"
+)
+# Produces: train.jsonl, test.jsonl, dataset_info.json
+# Load in Python: datasets.load_dataset("json", data_files={...})
+```
+
+## Step 8: Experiment with anomaly injection
+
+`inject_anomalies()` lets you create additional training scenarios
+by programmatically introducing flaws into clean documents.
+
+```{r inject}
+augmented <- inject_anomalies(reports, flaw_type = "generic_language", rate = 0.1)
+cat("Documents with injected flaws:",
+    sum(!is.na(augmented$injected_flaw)), "\n")
+```
+
+## Citation
+
+```{r citation, eval = FALSE}
+edinetsynth_citation()
+```
+
+For more information, visit the
+[JDEX listing](https://jdex.jp) (search: VilseckKI)
+or the [GitHub repository](https://github.com/misawa-data-gk/edinetsynth).

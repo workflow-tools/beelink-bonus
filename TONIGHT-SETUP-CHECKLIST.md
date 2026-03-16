@@ -87,8 +87,8 @@ ollama pull mistral:7b-instruct-q4_K_M
 ollama run llama3.1:70b-instruct-q4_K_M "Generate a realistic German Mittelstand company name in the Maschinenbau sector located in Oberpfalz, Bavaria. Return ONLY the company name, nothing else."
 
 # Note the tok/s shown at the end of generation
-# Expected on your hardware: 8-15 tok/s for 70B q4
-# If you get <3 tok/s, GPU isn't being used
+# Expected on AI Max+ 395 w/ ROCm GPU offload: 12-20 tok/s for 70B q4
+# If you get <8 tok/s, GPU isn't being used (check ROCm/HIP setup)
 ```
 
 ---

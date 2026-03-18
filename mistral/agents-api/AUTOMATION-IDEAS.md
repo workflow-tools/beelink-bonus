@@ -84,13 +84,16 @@ Specific automation opportunities mapped to active projects. Rated by feasibilit
 
 ## Lower Priority / Exploratory
 
-### 7. GRUND Multi-Agent Debate (Mistral Variant)
+### 7. GRUND Multi-Agent Debate (Mistral Variant) — CONDITIONAL
 **Project:** Dissertation
-**What:** Use Agents API handoffs to implement the multi-agent debate pattern with Mistral models as one leg of the 2x2 factorial design (cloud vs local x debate vs no-debate).
-**Why Mistral:** The Agents API's handoff mechanism maps naturally to the GRUND debate architecture.
-**Tools needed:** code_interpreter, handoffs
-**Estimated effort:** 8-12 hours
-**Academic value:** Comparing Claude vs Mistral in the debate framework is publishable
+**What:** Use Agents API handoffs to implement one variant of the multi-agent debate pattern with Mistral models.
+**Current GRUND design:** Local debate agents (Ollama on Beelink) + external API Judge. The 2x2 factorial isolates debate vs. single-agent and RAG vs. no-RAG. Model provider is NOT currently a variable in the factorial.
+**Where Mistral Agents API fits:** Variant D in the new pattern doc (`patterns/multi-agent-debate-compliance`). The handoff mechanism maps to debate rounds, server-mode handoffs enable fully automated debate, and MCP support could serve RAG retrieval. But the Agents API only orchestrates Mistral models — cross-provider debate (Claude Agent 1 + Mistral Agent 2 + local Agent 3) needs a higher-level orchestrator that the API doesn't provide.
+**Trigger for building this:** If GRUND leads to frequent multi-agent debate use beyond the dissertation (i.e., you're building debate orchestration plumbing more than twice across projects), the Agents API's built-in conversation state and MCP integration become worth the migration effort.
+**Research nuance (March 2026):** ICLR 2025 blogpost found current MAD frameworks don't consistently beat simple single-agent strategies; majority voting accounts for most gains. GRUND's differentiation is orthogonal specialist lenses + anonymized debate + sycophancy measurement — the pattern doc covers why this may escape the ICLR finding. NeurIPS 2025 poster on adaptive stability detection is a potential enhancement to explore later.
+**Estimated effort:** 8-12 hours for basic handoff prototype; 20+ hours for full Variant D with cross-provider routing
+**Academic value:** Comparing model families (Claude vs Mistral vs local) within the GRUND debate is publishable, but only worth adding to the dissertation if GRUND Paper 1 results show model-family effects. Don't expand the factorial prematurely.
+**Pattern doc:** See `../../patterns/patterns/multi-agent-debate-compliance/README.md` — Variant D section
 
 ### 8. Automated Localization Research
 **Project:** Rebeka / Patterns

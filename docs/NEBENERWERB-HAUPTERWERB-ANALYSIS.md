@@ -15,37 +15,34 @@
 | **Start? Zuschuss! pitch** | ⚠️ Weakened | ✅ Strengthened |
 | **Digitalbonus** | ✅ Unaffected | ✅ Unaffected |
 | **Innovationsgutscheine** | ✅ Unaffected | ✅ Unaffected |
-| **Health insurance (TRICARE)** | ✅ No change | ✅ Likely no change (see below) |
+| **Health insurance (Aetna Foreign Service)** | ✅ No change | ✅ No change — private intl. policy satisfies §193 VVG |
 | **Pension (Rentenversicherung)** | ✅ No obligation | ✅ No obligation (see below) |
 | **German income tax** | Already applies | Already applies |
 | **IHK fees** | Already a member | No meaningful change |
 | **Process complexity** | — | Low (one form + ~€20–40) |
 | **Grant potential unlocked** | €0 | Up to €67,500 (BayTOU) |
 
-**Recommendation:** Switch, but consult with your Steuerberater and/or the garrison legal office first to confirm the TRICARE finding below applies to your specific situation.
+**Recommendation:** Switch. Aetna Foreign Service eliminates the health insurance concern entirely. The only remaining step is filing the Gewerbeummeldung (~€30, same-day).
 
 ---
 
-## 1. Health Insurance (Krankenkasse) — The Big Question
+## 1. Health Insurance (Krankenkasse) — ✅ NOT AN ISSUE
 
-### The Fear
-The standard rule for self-employed individuals in Germany: you MUST have German health insurance. If Haupterwerb triggers this, you'd be looking at €300–800+/month for private health insurance, or income-dependent contributions for public insurance. This alone could make the switch financially irrational.
+### The Standard Fear
+The standard rule for self-employed individuals in Germany: you MUST have health insurance satisfying §193 VVG (Versicherungsvertragsgesetz). If you didn't have coverage, Haupterwerb would force you to buy German private health insurance at €300–800+/month.
 
-### The Reality for SOFA-Status Individuals
-A **Federal Social Court (Bundessozialgericht) ruling of 20.03.2013** addressed TRICARE specifically. The court found that:
+### Your Situation: Aetna Foreign Service
+You have **Aetna Foreign Service** health insurance through India's DoDEA employment. This is a **private international health insurance policy** — not a government benefit program like TRICARE. This is actually a cleaner situation than TRICARE:
 
-- TRICARE **does not technically meet** the German Versicherungspflicht (insurance obligation) under §193 VVG
-- **However**, TRICARE IS recognized as "anderweitige Absicherung" (alternative coverage) that **excludes you from the obligation**
+- §193 VVG requires coverage from a private health insurer covering inpatient and outpatient care with max €5,000/year deductible
+- Aetna Foreign Service is an actual insurance contract from a licensed insurer that meets these criteria
+- Unlike TRICARE (which needed a 2013 BSG court ruling to establish it as "alternative coverage"), a private international health policy straightforwardly satisfies the German insurance obligation
+- The Haupt-/Nebenerwerb distinction does NOT change your insurance obligation — you're already covered either way
 
-In practice: TRICARE creates a carve-out. You are not forced to obtain German health insurance because you already have recognized alternative coverage. This applies regardless of Haupt-/Nebenerwerb classification.
+### No Action Required
+No need to consult JAG or Steuerberater on this specific point. Aetna Foreign Service covers you regardless of how your Gewerbe is classified.
 
-### ⚠️ Caveat
-This is based on a 2013 ruling and general legal interpretation. Your specific situation (SOFA dependent, UG Geschäftsführer, American citizen) should be confirmed with:
-1. Your **Steuerberater** (who should know SOFA tax/insurance specifics)
-2. The **garrison legal office (JAG)** at Grafenwöhr/Vilseck
-3. Optionally, a brief inquiry to your **Krankenkasse contact** (if you have one from ELSTER setup)
-
-**Bottom line:** Highly likely that TRICARE continues to cover you. But confirm before filing.
+**Bottom line:** Health insurance is a non-issue for the switch. ✅
 
 ---
 
@@ -154,10 +151,10 @@ The cost of switching: ~€30 filing fee + a conversation with your Steuerberate
 
 ## 9. Recommended Action Sequence
 
-1. **This week:** Call your Steuerberater. Ask specifically: "If I switch my Gewerbe from Nebenerwerb to Haupterwerb, does this change my health insurance or social security obligations given my SOFA status and TRICARE coverage?"
-2. **Also this week:** Optionally, call the Vilseck garrison legal office (JAG) for a second opinion on TRICARE sufficiency under Haupterwerb.
-3. **If confirmed safe (highly likely):** File the Gewerbeummeldung at Gewerbeamt Vilseck. Budget 30 minutes + €30.
-4. **After reclassification:** Proceed with BayTOU application through Bayern Innovativ.
+1. **This week or next:** File the **Gewerbeummeldung** at Gewerbeamt Vilseck. Budget 30 minutes + ~€30. Change Nebenerwerb → Haupterwerb.
+2. **After reclassification:** Proceed with BayTOU application through Bayern Innovativ.
+
+Health insurance is a non-issue (Aetna Foreign Service satisfies §193 VVG). Pension is a non-issue (Gesellschafter-GF with 100% shares, not a mandatory category). Tax is already handled. No blockers remain.
 
 ---
 

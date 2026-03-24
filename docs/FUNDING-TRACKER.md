@@ -20,7 +20,7 @@
 | **Eliminated / Not applicable** | 5 (AI NATION, EXIST, HTGF, EIC Accelerator, GRW) |
 | **⚠️ NEBENERWERB FLAG** | BayTOU requires Haupterwerb — Gewerbe currently Nebenerwerb |
 | **Company founded** | ~August 2025 (~7 months old) |
-| **Max stacked grant funding (realistic)** | €109,500–€141,000 |
+| **Max stacked grant funding (realistic)** | €87,500–€126,500 (Digitalbonus reduced to €7.5K–€15K) |
 | **ELSTER account** | ✅ Confirmed active |
 | **Last full review** | 2026-03-24 |
 
@@ -46,23 +46,31 @@
 | **Confidence** | HIGH |
 | **Last Verified** | 2026-03-24 |
 
-**Fit Assessment:**
-- Strategic fit: 9/10 — Directly funds pipeline development + security infrastructure
-- Effort to apply: MEDIUM — Detailed plan exists in GRANT-APPLICATION-PLAN.md
-- Expected outcome: LIKELY — Well-documented innovation narrative, clear eligibility
+**Fit Assessment (REVISED 2026-03-24):**
+- Strategic fit: ~~9/10~~ → **5/10** — Program is designed for businesses ADOPTING tech, not BUILDING tech products
+- Two key exclusions apply:
+  1. **Eigenleistungen excluded** — Only external provider services are eligible, not your own dev work
+  2. **Products for resale excluded** — "IKT-Lösungen, die gegen Entgelt in anderen Unternehmen zum Einsatz kommen sollen und dort eine förderfähige Maßnahme sind, sind nicht förderfähig"
+- Track 2.2 (IT-Sicherheit) still viable for security hardware/services (€7,500)
+- Track 2.1 (Digitalisierung) only viable if reframed as internal operations digitalization, NOT Data Forge development
+- **Realistic revised amount: €7,500–€15,000** (down from €37,500)
+- Effort to apply: MEDIUM — Detailed plan exists in GRANT-APPLICATION-PLAN.md but **NEEDS MAJOR REVISION** (currently frames this as Data Forge development)
+- Expected outcome: LIKELY for Track 2.2; UNCLEAR for Track 2.1 — ask Bezirksregierung
 - Stacking: Yes — different expense categories from BayTOU
 
 **Status Updates (2026-03-24):**
-- ✅ ELSTER account confirmed active (previously listed as blocking)
-- ⚠️ Must contact Reg. Oberpfalz THIS WEEK for required pre-consultation (Plus track)
+- ✅ ELSTER account confirmed active
+- ⚠️ Must contact Reg. Oberpfalz THIS WEEK for required pre-consultation
+- ⚠️ CRITICAL QUESTION for consultation: Does the product-for-sale exclusion apply to synthetic data pipeline?
 - ⚠️ April 1 opening is date-sensitive — monthly contingent means early submission matters
 
 **Action Items:**
-- [ ] URGENT: Call Reg. Oberpfalz (+49 941 5680-1555) for Plus pre-consultation before March 31
+- [ ] URGENT: Call Reg. Oberpfalz (+49 941 5680-1555) — ask about product-for-sale exclusion applicability
 - [ ] Test ELSTER certificate login on digitalbonus.bayern portal
-- [ ] Gather cost quotes for Track 2.1 and 2.2 eligible expenses
-- [ ] Finalize application text per GRANT-APPLICATION-PLAN.md
-- [ ] Submit BOTH tracks on April 1, 2026 at 10:00 AM
+- [ ] Gather cost quotes for Track 2.2 (security hardware/services) — this is the safe track
+- [ ] If Track 2.1 confirmed eligible: reframe application around internal operations digitalization
+- [ ] REVISE GRANT-APPLICATION-PLAN.md — current Data Forge framing likely violates exclusions
+- [ ] Submit Track 2.2 on April 1; submit Track 2.1 only if confirmed eligible after consultation
 
 **Detailed Plan:** See `GRANT-APPLICATION-PLAN.md` in repo root.
 
@@ -412,3 +420,4 @@ invoice against two programs. Keep separate project scopes and budgets.
 | 2026-03-24 | Major update: eliminated AI NATION (2-founder req) + EXIST (company already registered); added KfW StartGeld, BMBF AI-KMU, Mikromezzaninfonds; confirmed ELSTER active; flagged Digitalbonus April 1 opening date; updated dashboard | Eligibility research session |
 | 2026-03-24 | CORRECTION: Company founded Aug 2025 (not 2024). Start?Zuschuss! upgraded from borderline → confirmed eligible. EXIST remains eliminated (structural: company must not exist at application time). Realistic total raised to €109.5K–€141K | User correction + EXIST FAQ verification |
 | 2026-03-24 | Vetted Mistral research output: Added Innovationsgutscheine (up to €38K, strong fit), BayTP+ (BayTOU backup), LfA GuW (loan). Eliminated HTGF (VC, not grant), GRW (industrial focus), EIC Accelerator (misaligned), BayVFP (same consortium barrier as BMBF). CRITICAL: Flagged Nebenerwerb registration conflict with BayTOU. Exact company dates from Handelsregisterauszug: Gesellschaftsvertrag 25.07.2025, HRB entry 11.08.2025, Gewerbe start 14.08.2025. | Mistral vetting + company reference PDF |
+| 2026-03-24 | MAJOR REVISION: Digitalbonus scope significantly reduced. Program funds businesses ADOPTING tech, not BUILDING tech products. Two exclusions: (1) Eigenleistungen not eligible, must use external providers; (2) Products for paid use in other companies excluded. Track 2.2 (IT-Sicherheit, €7.5K) still viable. Track 2.1 must be reframed as internal operations. Realistic Digitalbonus total revised from €37.5K to €7.5K–€15K. GRANT-APPLICATION-PLAN.md needs major revision. | User flag + Vollzugshinweise/FAQ research |

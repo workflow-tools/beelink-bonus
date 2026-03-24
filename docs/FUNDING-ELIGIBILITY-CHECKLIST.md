@@ -20,8 +20,10 @@ Your Gewerbe-Anmeldung (14.08.2025) registers ML Upskill Agents UG as **Nebenerw
 
 **Action required before BayTOU application:**
 - [ ] File a **Gewerbeummeldung** at Gewerbeamt Vilseck to reclassify from Nebenerwerb → Haupterwerb
-- [ ] Check social insurance / Krankenkasse implications of the reclassification (SOFA status may simplify this)
-- [ ] This is a simple administrative change, but must be completed BEFORE submitting BayTOU
+- Health insurance: ✅ NOT AN ISSUE — Aetna Foreign Service satisfies §193 VVG regardless of Haupt-/Nebenerwerb
+- Pension: ✅ NOT AN ISSUE — Gesellschafter-GF with 100% shares, not a mandatory pension category
+- Tax: ✅ Already handled — KSt/USt/ESt unchanged by reclassification
+- Process: ~€30, ~30 minutes at Gewerbeamt, same-day. Must be completed BEFORE submitting BayTOU.
 
 ---
 

@@ -10,7 +10,14 @@ This repo is for the exploration of how I can make use of my Beelink GTR9 Pro wi
 - **[SYNTHETIC-DATA-BUSINESS.md](SYNTHETIC-DATA-BUSINESS.md)** - Deep dive on the synthetic data generation business: market, tools, pricing, where to sell, and PhD synergy
 - **[GERMAN-COMPANY-ADVANTAGE.md](GERMAN-COMPANY-ADVANTAGE.md)** - Regulatory and procurement advantages of being a German company for selling data and AI services (GDPR, BSI C5, Vergaberecht, EU digital sovereignty, QuitGPT tailwind)
 
-> Plain text (.txt) versions of all documents are also available for mobile/universal readability.
+### Corpus Research (Training Data for Fine-Tuning)
+
+- **[INDUSTRIAL-DATASETS-CORPUS-RESEARCH.md](INDUSTRIAL-DATASETS-CORPUS-RESEARCH.md)** - 34 manufacturing/Industry 4.0 datasets: CNC vibration, machine audio, bearing degradation, predictive maintenance, wafer defects
+- **[HEALTHCARE-DATASETS-CORPUS-RESEARCH.md](HEALTHCARE-DATASETS-CORPUS-RESEARCH.md)** - 40+ healthcare datasets: synthetic patient records, German clinical text (CARDIO:DE, GGPONC), drug interactions, radiology, PhysioNet guide
+- **[SUPPLY-CHAIN-LEGAL-SYNTH-DATASETS-RESEARCH.md](SUPPLY-CHAIN-LEGAL-SYNTH-DATASETS-RESEARCH.md)** - 31 datasets: supply chain (SAP ERP, Cargo 2000), German legal (AGB-DE, 442K court decisions), GDPR/compliance, synthetic data meta-tools
+- **[GERMAN-BUSINESS-AGRICULTURE-DATASETS-RESEARCH.md](GERMAN-BUSINESS-AGRICULTURE-DATASETS-RESEARCH.md)** - 22 datasets: German financial text (FinCorpus-DE 165M tokens), company registries, Hokkaido dairy/rice data, Japanese crop statistics
+
+> Plain text (.txt) versions of strategy documents are also available for mobile/universal readability.
 
 ## The Hardware Advantage
 

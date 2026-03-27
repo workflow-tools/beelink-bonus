@@ -16,6 +16,7 @@ This repo is for the exploration of how I can make use of my Beelink GTR9 Pro wi
 - **[HEALTHCARE-DATASETS-CORPUS-RESEARCH.md](HEALTHCARE-DATASETS-CORPUS-RESEARCH.md)** - 40+ healthcare datasets: synthetic patient records, German clinical text (CARDIO:DE, GGPONC), drug interactions, radiology, PhysioNet guide
 - **[SUPPLY-CHAIN-LEGAL-SYNTH-DATASETS-RESEARCH.md](SUPPLY-CHAIN-LEGAL-SYNTH-DATASETS-RESEARCH.md)** - 31 datasets: supply chain (SAP ERP, Cargo 2000), German legal (AGB-DE, 442K court decisions), GDPR/compliance, synthetic data meta-tools
 - **[GERMAN-BUSINESS-AGRICULTURE-DATASETS-RESEARCH.md](GERMAN-BUSINESS-AGRICULTURE-DATASETS-RESEARCH.md)** - 22 datasets: German financial text (FinCorpus-DE 165M tokens), company registries, Hokkaido dairy/rice data, Japanese crop statistics
+- **[JAPANESE-NLP-AGRICULTURE-RESEARCH.md](JAPANESE-NLP-AGRICULTURE-RESEARCH.md)** - Tohoku University NLP + Hokkaido agriculture synthesis: Qwen 72B fine-tuning (confirmed on Beelink), Japanese NLP ecosystem (1,274 models), agricultural corpus gap analysis, phytosanitary data, recommended pipeline
 
 > Plain text (.txt) versions of strategy documents are also available for mobile/universal readability.
 

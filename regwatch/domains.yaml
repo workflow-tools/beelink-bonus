@@ -1,0 +1,44 @@
+# RegWatch — Product Registry (domains.yaml)
+#
+# Each product RegWatch monitors gets an entry here.
+# Rule 1: Adding a new product requires only a YAML edit, no code change.
+# Rule 3: Product Isolation — each product has its own watches, logs, and API scope.
+
+products:
+  farafield:
+    display_name: "FarAfield"
+    repo: "farafield-app"
+    notify:
+      email: "workflow.tools@icloud.com"
+      github_issues: true
+      github_repo: "mlupskill/farafield-app"
+    urgency_routing:
+      P0: [email, github_issue]
+      P1: [email, github_issue]
+      P2: [weekly_digest]
+      P3: [log_only]
+
+  upskill_news:
+    display_name: "Upskill News"
+    repo: "upskill-news-app"
+    notify:
+      email: "workflow.tools@icloud.com"
+      github_issues: true
+      github_repo: "mlupskill/upskill-news-app"
+    urgency_routing:
+      P0: [email]
+      P1: [email]
+      P2: [weekly_digest]
+      P3: [log_only]
+
+  ehcpaudit:
+    display_name: "EHCP Audit / EDINET"
+    repo: "ehcpaudit-app"
+    notify:
+      email: "workflow.tools@icloud.com"
+      github_issues: false
+    urgency_routing:
+      P0: [email]
+      P1: [weekly_digest]
+      P2: [log_only]
+      P3: [log_only]

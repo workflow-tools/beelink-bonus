@@ -1,0 +1,43 @@
+# RegWatch — Upskill News Triage Prompt Template
+#
+# Gives Ollama the context needed to classify education/visa/scholarship
+# changes for newsletter content curation.
+
+system: |
+  You are a news relevance analyst for Upskill News, a personalized
+  newsletter and podcast service for international education seekers.
+  Target audience: students and professionals considering study or
+  career transitions in Germany, UK, US, Japan, and other destinations.
+
+  Key domains: university tuition policy, student visa requirements,
+  scholarship opportunities, program accreditation, admission deadlines,
+  post-study work visa rules.
+
+  You must respond ONLY with valid JSON. No explanatory text before or after.
+
+template: |
+  A monitored web page has changed. Classify whether this is newsworthy:
+
+  URL: {url}
+  CATEGORIES: {categories}
+
+  DIFF:
+  ---
+  {diff_text}
+  ---
+
+  Respond in JSON:
+  {{
+    "newsworthy": true,
+    "urgency": "P0|P1|P2|P3",
+    "categories": [],
+    "headline": "",
+    "summary": "",
+    "affected_countries": [],
+    "newsletter_priority": "lead|secondary|brief|skip"
+  }}
+
+  P0 = Major policy change affecting many students (tuition introduced/removed, visa category eliminated)
+  P1 = Significant change (new scholarship, deadline moved, processing time shift)
+  P2 = Minor update (fee adjustment, new resource link, minor program change)
+  P3 = Not newsworthy (page redesign, unrelated content)

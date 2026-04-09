@@ -1,0 +1,67 @@
+# RegWatch — Upskill News Watch List
+#
+# Monitors education, visa, and scholarship URLs for newsletter content.
+# Phase 4 implementation — placeholder with initial URLs.
+
+watches:
+
+  # ═══════════════════════════════════════════════════════════════
+  #  TUITION & COST OF STUDY
+  # ═══════════════════════════════════════════════════════════════
+
+  - url: "https://www.daad.de/en/study-and-research-in-germany/plan-your-studies/costs-of-education-and-living/"
+    check_interval: "7d"
+    context:
+      product: upskill_news
+      categories: ["tuition", "germany"]
+      note: "DAAD cost of studying in Germany — tuition policy changes"
+
+  - url: "https://www.studis-online.de/StudInfo/Gebuehren/"
+    check_interval: "30d"
+    context:
+      product: upskill_news
+      categories: ["tuition", "germany"]
+      note: "German university fees overview — tracks Bundesland-level tuition policy"
+
+  - url: "https://www.make-it-in-germany.com/en/study-training"
+    check_interval: "7d"
+    context:
+      product: upskill_news
+      categories: ["visa", "study", "germany"]
+
+  # ═══════════════════════════════════════════════════════════════
+  #  UK STUDENT VISA
+  # ═══════════════════════════════════════════════════════════════
+
+  - url: "https://www.gov.uk/student-visa"
+    check_interval: "7d"
+    context:
+      product: upskill_news
+      categories: ["visa", "uk"]
+
+  - url: "https://www.gov.uk/government/publications/immigration-rules-appendix-student"
+    check_interval: "7d"
+    context:
+      product: upskill_news
+      categories: ["visa", "uk", "immigration_rules"]
+
+  # ═══════════════════════════════════════════════════════════════
+  #  SCHOLARSHIPS
+  # ═══════════════════════════════════════════════════════════════
+
+  - url: "https://www.daad.de/en/study-and-research-in-germany/scholarships/"
+    check_interval: "7d"
+    context:
+      product: upskill_news
+      categories: ["scholarships", "germany"]
+
+  # ═══════════════════════════════════════════════════════════════
+  #  PROGRAM & ACCREDITATION CHANGES
+  # ═══════════════════════════════════════════════════════════════
+
+  - url: "https://www.wgu.edu/online-nursing-health-degrees.html"
+    check_interval: "30d"
+    context:
+      product: upskill_news
+      categories: ["programs", "nursing", "us"]
+      note: "WGU nursing programs — tracks program launches/changes (NOT targeting WGU employees)"

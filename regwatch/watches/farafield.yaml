@@ -1,0 +1,159 @@
+# RegWatch — FarAfield Watch List
+#
+# Monitors regulatory URLs relevant to international nurse migration to Germany/Austria.
+# Source: farafield-app/docs/Regulatory-Monitor-Guide.md
+#
+# Step keys and corridor codes match PathwayDefinition in farafield-app/lib/types/pathway.ts.
+# Rule 2: Detection, Not Correction — RegWatch notifies; humans verify and update.
+
+watches:
+
+  # ═══════════════════════════════════════════════════════════════
+  #  TIER 1: DAILY — Core regulatory sources
+  # ═══════════════════════════════════════════════════════════════
+
+  - url: "https://www.make-it-in-germany.com/en/working-in-germany/professions-in-demand/nursing"
+    check_interval: "1d"
+    css_selector: ".content-main"
+    context:
+      product: farafield
+      corridors: ["ALL"]
+      likely_steps: ["research_orientation", "visa_application", "job_search"]
+      likely_fields: ["description", "resources", "tips"]
+
+  - url: "https://www.gesetze-im-internet.de/aufenthg_2004/__16d.html"
+    check_interval: "1d"
+    context:
+      product: farafield
+      corridors: ["ALL"]
+      likely_steps: ["visa_application"]
+      likely_fields: ["description", "tasks"]
+      note: "§16d AufenthG — Recognition visa"
+
+  - url: "https://www.gesetze-im-internet.de/aufenthg_2004/__30.html"
+    check_interval: "1d"
+    context:
+      product: farafield
+      corridors: ["ALL"]
+      likely_steps: ["family_reunion_visa"]
+      likely_fields: ["description", "tasks", "warnings"]
+      note: "§30 AufenthG — Spouse language requirement, skilled worker exemption"
+
+  - url: "https://www.gesetze-im-internet.de/beschv_2013/__38.html"
+    check_interval: "1d"
+    context:
+      product: farafield
+      corridors: ["NG_DE", "PK_DE"]
+      likely_steps: ["research_orientation", "job_search"]
+      likely_fields: ["warnings"]
+      note: "§38 BeschV — WHO safeguard enforcement"
+
+  - url: "https://www.gesetze-im-internet.de/pflbg/"
+    check_interval: "1d"
+    context:
+      product: farafield
+      corridors: ["ALL"]
+      likely_steps: ["recognition_application", "adaptation_measures"]
+      likely_fields: ["description", "tasks"]
+      note: "PflBG — Pflegeberufegesetz, nursing professions act"
+
+  # ═══════════════════════════════════════════════════════════════
+  #  TIER 1: WEEKLY — Country-specific + exam infrastructure
+  # ═══════════════════════════════════════════════════════════════
+
+  - url: "https://www.nmcn.gov.ng/"
+    check_interval: "7d"
+    context:
+      product: farafield
+      corridors: ["NG_DE"]
+      likely_steps: ["nmcn_clearance", "credential_documents"]
+      likely_fields: ["tasks", "estimatedCostEur", "warnings"]
+      note: "Nigerian Nursing and Midwifery Council"
+
+  - url: "https://visa.vfsglobal.com/nga/en/deu"
+    check_interval: "7d"
+    context:
+      product: farafield
+      corridors: ["NG_DE"]
+      likely_steps: ["visa_application"]
+      likely_fields: ["resources", "tips"]
+      note: "VFS Global Nigeria → Germany visa services"
+
+  - url: "https://www.goethe.de/ins/tr/en/sta.html"
+    check_interval: "7d"
+    context:
+      product: farafield
+      corridors: ["TR_DE"]
+      likely_steps: ["language_a1_a2", "language_b1", "language_b2"]
+      note: "Goethe-Institut Turkey — exam dates and registration"
+
+  - url: "https://www.goethe.de/ins/ng/en/sta.html"
+    check_interval: "7d"
+    context:
+      product: farafield
+      corridors: ["NG_DE"]
+      likely_steps: ["language_a1_a2", "language_b1", "language_b2"]
+      note: "Goethe-Institut Nigeria — exam dates and registration"
+
+  - url: "https://www.goethe.de/ins/in/en/sta.html"
+    check_interval: "7d"
+    context:
+      product: farafield
+      corridors: ["IN_DE"]
+      likely_steps: ["language_a1_a2", "language_b1", "language_b2"]
+      note: "Goethe-Institut India — exam dates and registration"
+
+  # ═══════════════════════════════════════════════════════════════
+  #  TIER 1: MONTHLY — Structural / infrequently changing
+  # ═══════════════════════════════════════════════════════════════
+
+  - url: "https://www.who.int/publications/i/item/9789240069787"
+    check_interval: "30d"
+    context:
+      product: farafield
+      corridors: ["NG_DE", "PK_DE"]
+      likely_steps: ["research_orientation"]
+      likely_fields: ["whoSafeguardListed", "warnings"]
+      note: "WHO Health Workforce Support and Safeguards List — next update expected 2026"
+
+  - url: "https://www.expatrio.com/"
+    check_interval: "30d"
+    css_selector: ".blocked-account, .pricing"
+    context:
+      product: farafield
+      corridors: ["ALL"]
+      likely_steps: ["blocked_account"]
+      likely_fields: ["estimatedCostEur"]
+      note: "Blocked account provider — pricing and requirement changes"
+
+  - url: "https://www.fintiba.com/"
+    check_interval: "30d"
+    css_selector: ".blocked-account, .pricing"
+    context:
+      product: farafield
+      corridors: ["ALL"]
+      likely_steps: ["blocked_account"]
+      likely_fields: ["estimatedCostEur"]
+      note: "Blocked account provider (alternative) — pricing changes"
+
+  # ═══════════════════════════════════════════════════════════════
+  #  RSS FEEDS — German federal law gazette + open legislation
+  # ═══════════════════════════════════════════════════════════════
+
+  - url: "https://www.recht.bund.de/de/serviceseiten/rss/rss_node.html"
+    type: rss
+    check_interval: "1d"
+    keyword_filter: "Pflege|Pflegefachkraft|Anerkennung|Fachkräfte|Aufenthaltsgesetz|Beschäftigungsverordnung|Pflegeberufegesetz"
+    context:
+      product: farafield
+      corridors: ["ALL"]
+      note: "Bundesgesetzblatt — German federal law gazette"
+
+  - url: "https://offenegesetze.de/feeds"
+    type: rss
+    check_interval: "1d"
+    keyword_filter: "Pflege|Anerkennung|Aufenthalt|Fachkräfte"
+    context:
+      product: farafield
+      corridors: ["ALL"]
+      note: "OffeneGesetze — open access German legislation feed"

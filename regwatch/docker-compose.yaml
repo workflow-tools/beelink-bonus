@@ -1,0 +1,48 @@
+# RegWatch — Docker Compose
+# Runs changedetection.io + Playwright browser for JS-rendered pages.
+# Ollama is NOT included here — it's already running on the Beelink host.
+#
+# Usage:
+#   cd ~/regwatch && docker compose up -d
+#
+# Web UI: http://localhost:5000
+# Webhook target: http://host.docker.internal:5050/webhook (or host network)
+
+version: "3.9"
+
+services:
+  changedetection:
+    image: ghcr.io/dgtlmoon/changedetection.io:latest
+    container_name: regwatch-changedetection
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - changedetection-data:/datastore
+    environment:
+      # Point to Playwright container for JS-rendered pages
+      - PLAYWRIGHT_DRIVER_URL=ws://playwright-chrome:3000/?stealth=1&--disable-web-security=true
+      # Base URL for webhook callbacks (regwatch orchestrator on host)
+      - BASE_URL=http://localhost:5000
+    depends_on:
+      - playwright-chrome
+
+  playwright-chrome:
+    image: browserless/chrome:latest
+    container_name: regwatch-playwright
+    restart: unless-stopped
+    environment:
+      - SCREEN_WIDTH=1920
+      - SCREEN_HEIGHT=1080
+      - SCREEN_DEPTH=16
+      - ENABLE_DEBUGGER=false
+      - DEFAULT_BLOCK_ADS=true
+      - DEFAULT_STEALTH=true
+      - MAX_CONCURRENT_SESSIONS=2
+      - CONNECTION_TIMEOUT=300000
+      - PREBOOT_CHROME=true
+    # No host port exposure needed — only changedetection talks to it
+
+volumes:
+  changedetection-data:
+    driver: local

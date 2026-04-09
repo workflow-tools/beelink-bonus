@@ -1,0 +1,33 @@
+# RegWatch .gitignore
+
+# Change logs contain operational data, not configuration
+changes/*.jsonl
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# Docker volumes (managed by Docker, not git)
+changedetection-data/
+
+# Environment variables (secrets)
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

@@ -349,6 +349,176 @@ If Ollama is unreachable, if a webhook payload is malformed, if Resend email fai
 
 ---
 
+## Development Best Practices
+
+> These conventions are informed by current research on LLM-assisted coding
+> workflows (Osmani 2026, Willison 2025, Honeycomb 2025) and are designed to
+> make the codebase productive for both human developers and AI assistants
+> (Claude, Cursor, Cursor BugBot). A solo founder with four children cannot
+> afford debugging sessions caused by ambiguous code.
+
+### DP-1: Small, Focused Files (~200 Lines Max)
+
+Each Python module in `regwatch/` handles exactly one concern. If a module
+grows past ~200 lines, split it. LLMs perform measurably better when given
+a single focused file as context rather than a large monolith — they produce
+fewer hallucinated imports, maintain consistent style, and are less likely
+to lose track of state. This also means Cursor's inline edits and BugBot's
+per-file analysis stay within their optimal context window.
+
+### DP-2: Type Hints on Every Public Interface
+
+All function signatures must include type hints for parameters and return
+values. This is non-negotiable. Type hints serve triple duty:
+
+1. **Human readability** — intent is explicit without reading the body.
+2. **LLM grounding** — models generate significantly more correct code when
+   they can see typed signatures in context. Research consistently shows
+   that type annotations reduce LLM hallucination of incorrect parameter
+   types and return shapes.
+3. **Cursor/BugBot analysis** — static type information enables BugBot to
+   catch type mismatches across call sites, not just within the changed file.
+
+Use `dict[str, Any]` over bare `dict`. Use `Optional[X]` or `X | None`
+explicitly. Import from `typing` only when needed for older Python compat.
+
+### DP-3: Docstrings on Every Module, Class, and Public Function
+
+Follow Google-style or NumPy-style docstrings consistently (this project
+uses Google-style). Every docstring must include:
+
+- **One-line summary** in imperative mood ("Send a triage result to Ollama.")
+- **Args section** with parameter names, types, and purpose
+- **Returns section** describing the return value
+- **Raises section** if the function raises exceptions intentionally
+
+Well-structured docstrings are the single highest-impact investment for
+LLM-assisted development. They serve as the "specification" that both
+Cursor's autocomplete and Claude's code generation use to infer intent.
+Vague or missing docstrings force the LLM to guess — and guessing is
+where bugs come from.
+
+### DP-4: Explicit Error Handling — No Bare Excepts
+
+Every `try/except` block must catch specific exception types. Bare
+`except:` or `except Exception:` at a high level is only acceptable in
+the webhook handler and CLI entry points where Rule 6 (No Silent Failures)
+requires a catch-all with logging.
+
+Log the error with enough context to reproduce: the URL, the product name,
+the operation that failed, and the exception message. Use Python's
+`logging` module, not `print()`.
+
+### DP-5: Test-Driven Iteration
+
+Write tests before or alongside implementation, not after. The test suite
+is the specification that both humans and LLMs work against.
+
+**Test structure:**
+```
+regwatch/
+├── tests/
+│   ├── __init__.py
+│   ├── test_config.py      # YAML loading, watch lookup, URL index
+│   ├── test_triage.py      # Prompt building, response parsing (mock Ollama)
+│   ├── test_log.py         # JSONL append, dedup, read with filters
+│   ├── test_notify.py      # Email/GitHub formatting (mock HTTP)
+│   ├── test_api.py         # Flask test client for all endpoints
+│   ├── test_digest.py      # Digest compilation logic
+│   └── conftest.py         # Shared fixtures (sample configs, mock data)
+```
+
+**Testing conventions:**
+- Use `pytest` as the test runner.
+- Mock external services (Ollama, Resend, GitHub API) — never make real
+  HTTP calls in tests.
+- Each test function tests one behaviour and is named
+  `test_{module}_{behaviour}_{scenario}`.
+- Fixtures in `conftest.py` provide sample YAML configs and triage results
+  so test data is consistent and DRY.
+- Target: 80%+ line coverage on the orchestrator modules. Config loading
+  and JSONL parsing are especially important to cover since they're the
+  most likely source of subtle bugs.
+
+### DP-6: Cursor + BugBot Integration
+
+This project uses Cursor as the primary IDE alongside VS Code. To maximise
+BugBot's effectiveness:
+
+**`.cursor/BUGBOT.md`** — Create this file in the regwatch project root with
+project-specific review rules. BugBot reads this on every PR review. Include:
+- Rule 6 enforcement: "Flag any `except` block that does not log or notify."
+- YAML contract: "Flag any Python code that hardcodes a URL, product name,
+  or urgency level that should come from YAML config."
+- Type safety: "Flag any public function missing type hints."
+- No silent drops: "Flag any code path where a webhook could be received
+  and no log entry or notification is produced."
+
+**`.cursor/rules/`** — Create Cursor project rules for inline AI assistance:
+- Remind Cursor of the module structure and which file handles which concern.
+- Include the six Development Rules so Cursor's suggestions don't violate them.
+- Reference the YAML config schema so Cursor doesn't hallucinate config keys.
+
+**BugBot Autofix** — When BugBot identifies issues on PRs, its Autofix
+feature can spawn cloud agents to propose fixes. Given this is a solo project,
+Autofix is valuable for catching issues you might miss during late-night
+commits. Review Autofix suggestions with the same rigour as any other code.
+
+### DP-7: Commit Hygiene
+
+- **Atomic commits:** One logical change per commit. "Add dedup logic to
+  log.py" is good. "Add dedup + fix email + update README" is three commits.
+- **Conventional commit messages:** Use the format `type(scope): description`.
+  Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`.
+  Examples: `feat(triage): add JSON extraction fallback for markdown-wrapped responses`,
+  `fix(notify): handle missing github_repo in product config`.
+- **Never commit secrets.** The `.gitignore` already excludes `.env`. If you
+  need to reference API keys in docs, use placeholder format: `re_...` or
+  `ghp_...`.
+
+### DP-8: LLM Context Files
+
+Maintain these files to help any AI assistant (Claude, Cursor, future tools)
+understand the project quickly:
+
+- **`CLAUDE.md`** (project root or `beelink-bonus/regwatch/`) — Machine-readable
+  project context: what the system does, module responsibilities, config schema
+  summary, and the six rules. This is the "llms.txt" equivalent for Claude sessions.
+- **`.cursor/BUGBOT.md`** — BugBot-specific review rules (see DP-6).
+- **`.cursor/rules/regwatch.mdc`** — Cursor project rules for inline suggestions.
+- **`README.md`** — Human-readable setup guide (already exists).
+
+When making significant architectural changes, update these context files in
+the same commit. Stale context files are worse than no context files — they
+cause LLMs to generate code against outdated assumptions.
+
+### DP-9: Dependency Minimalism
+
+RegWatch has exactly four runtime dependencies: `flask`, `requests`, `pyyaml`,
+`resend`. Adding a new dependency requires justification — each dependency is
+a surface area for security issues, version conflicts, and LLM confusion
+(models are more reliable with well-known, stable libraries than with niche
+packages).
+
+If a task can be accomplished with the Python standard library in roughly the
+same number of lines, prefer the standard library.
+
+### DP-10: YAML Schema Discipline
+
+YAML config files are the public API of this system (Rule 1). Treat them with
+the same rigour as a code interface:
+
+- **Document every key** with inline comments in the example configs.
+- **Validate on load** — `config.py` should warn (not crash) on unrecognised
+  keys, and error on missing required keys.
+- **Version the schema** — if the YAML structure changes, increment a
+  `schema_version` key so older configs can be migrated or rejected with a
+  clear error message.
+- **Never add a YAML key without updating the context files** (CLAUDE.md,
+  BUGBOT.md) in the same commit.
+
+---
+
 ## Resource Budget
 
 | Component | RAM | CPU | Disk | Network |

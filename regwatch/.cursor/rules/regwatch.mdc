@@ -1,0 +1,47 @@
+---
+description: RegWatch project conventions for Cursor AI assistance
+globs: regwatch/**/*.py, watches/**/*.yaml, prompts/**/*.yaml, domains.yaml
+---
+
+# RegWatch — Cursor Project Rules
+
+## System Overview
+RegWatch is a self-hosted web change detection system. changedetection.io
+polls URLs, fires webhooks to a Flask app (port 5050), which triages diffs
+via a local Ollama LLM and routes notifications by urgency.
+
+## Six Development Rules (never violate these)
+1. Config-Driven — all URLs, products, prompts are in YAML. No hardcoded values.
+2. Detection, Not Correction — never modify product content. Output is always a notification.
+3. Product Isolation — separate watches, logs, API scope per product.
+4. Idempotent Triage — dedup by hash(url + diff + hour).
+5. Ollama Sharing — share the instance, queue behind other jobs.
+6. No Silent Failures — every error produces a log entry AND a fallback notification.
+
+## Module Responsibilities (do not mix concerns)
+- app.py → Flask app factory, webhook handler, health check
+- config.py → YAML loading + lookup methods only
+- triage.py → Ollama API calls + JSON response parsing only
+- notify.py → Email + GitHub Issue creation only
+- log.py → JSONL append + dedup + read queries only
+- api.py → Flask blueprint for query endpoints only
+- digest.py → Weekly digest compilation + sending only
+- cli.py → CLI argument parsing + command dispatch only
+
+## Code Style
+- Python 3.11+ with type hints on all public functions
+- Google-style docstrings on all modules, classes, public functions
+- Specific exception types in try/except (no bare except)
+- Use logging module, never print()
+- Max ~200 lines per module
+
+## YAML Config Schema (key reference)
+- domains.yaml: products.{name}.{display_name, repo, notify, urgency_routing}
+- watches/*.yaml: watches[].{url, check_interval, type?, css_selector?, keyword_filter?, context}
+- watches[].context: {product, corridors?, likely_steps?, likely_fields?, categories?, note?}
+- prompts/*_triage.yaml: {system, template} with {url}, {diff_text}, {corridors}, etc. placeholders
+
+## Testing
+- pytest with mocked HTTP (never call real Ollama/Resend/GitHub in tests)
+- Test naming: test_{module}_{behaviour}_{scenario}
+- Fixtures in conftest.py for sample configs and triage results

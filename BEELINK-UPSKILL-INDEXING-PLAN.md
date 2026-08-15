@@ -9,6 +9,10 @@
 > Plus a survey of the freshly-cloned canonical `vilseckki-datafactory-app`.
 >
 > **Companion docs:**
+> `BEELINK-PROTOTYPE-RUNBOOK.md` (**execution checklist for Phases 0–2** — added
+> 2026-08-15 evening; **supersedes this plan's fleet assumptions**: beeteam is now
+> Ubuntu-primary with Claude Code on the box, the dev Mac is a new M5 Air without
+> Tailscale, the old tailnet topology is defunct) ·
 > `upskill-news-app/docs/BEELINK_FACTS_INDEX.md` (app-side integration contract) ·
 > `patterns/docs/research/BEELINK_INDEX_ASSET_RESEARCH.md` (market + hardware research, with sources) ·
 > patterns idea **#110** (Verified Education Facts Ledger + Change Feed).
@@ -90,9 +94,13 @@ residential line.
   lawfully accessible works (honor machine-readable opt-outs; extract facts,
   never republish text).
 
-**Honest ceiling:** the education vertical has ~2,800 IECA members and <10
-platform buyers. As a *product*, the index is a five-figure-to-low-six-figure
-niche. As the *moat under Upskill News* — the defense against the #1 churn
+**Honest ceiling** (corrected 2026-08-15 — the first draft counted IECA alone):
+the organized core is ~2,800 IECA + ~2,000 HECA members, plus regional
+associations and a largely unaffiliated majority — several times the IECA
+figure in total — but platform buyers still number <10. As a *product*, the
+index remains a niche, not a venture API. These counts fluctuate and are not a
+lever we control: sized once here for calibration, not for ongoing tracking —
+don't re-litigate them. As the *moat under Upskill News* — the defense against the #1 churn
 driver (confidently-wrong facts) — it is load-bearing regardless. That is why
 the plan builds it for internal use first and sells it only if a dated demand
 probe (§8) says so.

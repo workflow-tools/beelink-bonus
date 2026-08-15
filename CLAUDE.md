@@ -216,6 +216,7 @@ and `patterns/docs/research/BEELINK_INDEX_ASSET_RESEARCH.md`):
 | `README.md` | Repo overview |
 | `CLAUDE.md` | This file — Claude context |
 | `BEELINK-UPSKILL-INDEXING-PLAN.md` | **Master plan (2026-08-15)** — decision record (4 designs, 3-judge panel), Verified Facts Store + Newsroom Runner architecture, Phase 0 hardware runbook, phased to-dos, kill gates |
+| `BEELINK-PROTOTYPE-RUNBOOK.md` | **Execution checklist (2026-08-15 evening)** — action items to the first shadow edition, with executor tags (`[CC@beeteam]` etc.), current fleet facts (Ubuntu-primary beeteam + Claude Code on-box, new M5 Air, tailnet to be re-established), and the on-box kickoff prompt |
 | `VILSECKKI-FINAL-ARCHITECTURE.md` | Full VilseckKI RAG + services architecture |
 | `VILSECKKI-IMPLEMENTATION-PLAN.md` | RAG service implementation roadmap |
 | `AUTH-AND-BACKEND-COMPARISON.md` | Auth/backend options analysis |

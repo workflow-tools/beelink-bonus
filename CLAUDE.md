@@ -2,7 +2,11 @@
 
 > **Purpose:** Single source of truth for any Claude session working on the Beelink AI server strategy.
 > Any new thread should read this file first.
-> Last updated: March 2026.
+> Last updated: August 2026.
+> **Current master plan:** `BEELINK-UPSKILL-INDEXING-PLAN.md` (2026-08-15) — decision record
+> + phased build plan for the Beelink as upskill-news production server + Verified Facts
+> Store. It supersedes `TONIGHT-SETUP-CHECKLIST.md` and corrects several hardware facts
+> that older docs in this repo still carry (see its §3 "Corrections to the record").
 
 ---
 
@@ -27,22 +31,36 @@ The machine is owned by Ryan Hill, founder of ML Upskill Agents UG (haftungsbesc
 | **CPU** | 16 Zen 5 cores |
 | **Key insight** | Apple Silicon-class unified memory on AMD. GPU can address all 128GB, enabling large model inference that discrete GPU machines cannot match at this price point. |
 
-### Realistic Inference Speeds (ROCm/Vulkan via Ollama or llama.cpp)
+### Realistic Inference Speeds (community figures, mid-2026 — this unit still unbenchmarked)
 
-| Model | Quant | VRAM Used | Est. Tok/s |
-|-------|-------|-----------|------------|
-| 7B | Q4_K_M | ~4.5GB | 80–120 |
-| 13B | Q4_K_M | ~8GB | 40–70 |
-| 34B | Q4_K_M | ~20GB | 15–30 |
-| 70B | Q4_K_M | ~40GB | 8–15 |
-| 70B | Q8 | ~75GB | 4–8 |
+> Corrected 2026-08-15: the previous table overstated dense models and missed the
+> platform's real strength entirely. Token generation is memory-bandwidth-bound
+> (~212 GB/s measured); **MoE models are the sweet spot, dense 70B is not.**
+> Prompt *prefill* is the weak side vs discrete GPUs. First-party numbers for this
+> unit are a Phase 0 task of `BEELINK-UPSKILL-INDEXING-PLAN.md` — record them in
+> `mistral/open-source-models/BEELINK-FIT.md` (its results log is still empty).
+
+| Model class | Example | Est. Tok/s (decode) |
+|-------|-------|------------|
+| 7–8B dense Q4 | llama3.1:8b | ~50 |
+| 30B-A3B-class MoE | Qwen3-30B family | ~100 |
+| 100B+ MoE | gpt-oss-120b | ~48–55 |
+| 122B MoE (production model) | Qwen3.5-122B-A10B Q4 | ~25–40 (per upskill-news LOCAL_LLM_ARCHITECTURE) |
+| 70B dense Q4 | llama3.3:70b | ~5 (batch only) |
+| 235B MoE Q3 | Qwen3-235B | ~12 |
 
 ### Critical GPU Setup
 
 ```bash
-export HSA_OVERRIDE_GFX_VERSION=11.0.0   # RDNA 3.5 compatibility flag
-ollama serve                              # Ollama auto-detects 890M GPU
+# CORRECTED 2026-08-15: this chip is gfx1151 (Strix Halo). The old 11.0.0 value
+# spoofs gfx1100 (RDNA3 dGPU) and can force mismatched kernels — do not use it.
+export HSA_OVERRIDE_GFX_VERSION=11.5.1   # for Ollama/ROCm; omit entirely on native-gfx1151 ROCm 7.x builds
+ollama serve                              # never set OLLAMA_VULKAN=1 (hangs on Qwen3.5-class models)
 # Verify: rocm-smi in a second terminal while running inference
+# ~110GB GPU-addressable on Linux needs kernel params: amdgpu.gttsize=131072 ttm.pages_limit=31457280
+# Cap 24/7 serving contexts at ~64K (200K+ can exhaust kernel memory and crash the box)
+# Note: llama-server (Vulkan/RADV) measures ~2x Ollama throughput on this platform —
+# serving binary is decided by the Phase 0 benchmark, not by default.
 ```
 
 ---
@@ -165,13 +183,29 @@ All Claude session notes go in `./log/` with filename format: `YYYY-MM-DD-topic.
 
 ## Open Questions
 
-- [ ] Is Ollama + ROCm stable on this chip as of March 2026? Need to verify.
-- [ ] What's the actual measured tok/s on this specific unit? Benchmark needed.
-- [ ] NPU (XDNA 2) support status in llama.cpp — check GitHub PRs
-- [ ] Tailscale vs Cloudflare Tunnel for client access — test both
+Statuses updated 2026-08-15 (evidence + sources: `BEELINK-UPSKILL-INDEXING-PLAN.md` §3
+and `patterns/docs/research/BEELINK_INDEX_ASSET_RESEARCH.md`):
+
+- [x] ~~Is Ollama + ROCm stable on this chip?~~ **Answered:** yes with the corrected
+      config (gfx1151 → HSA override 11.5.1, never `OLLAMA_VULKAN=1`, contexts ≤~64K),
+      but Ollama leaves ~2× throughput vs `llama-server` (Vulkan) — benchmark decides
+      the serving binary.
+- [ ] Actual measured tok/s + embedding throughput on THIS unit — still open; Phase 0
+      benchmark gate; record in `mistral/open-source-models/BEELINK-FIT.md`.
+- [x] ~~NPU (XDNA 2) support status~~ **Answered:** usable on Linux since Mar 2026 via
+      FastFlowLM + Lemonade (small ~3B models, <2W, needs IOMMU **on**); irrelevant to
+      the main GPU serving path — sidecar use only, never load-bearing.
+- [x] ~~Tailscale vs Cloudflare Tunnel~~ **Resolved:** private Tailscale tailnet for
+      anything confidential — Cloudflare Tunnel decrypts at its US edge, which breaks
+      the §203/DSGVO pitch; Cloudflare only ever for a public marketing site.
 - [ ] Which Mittelstand verticals in the region are most accessible? (Legal? Medical? Manufacturing?)
-- [ ] Can the Beelink run 24/7 reliably as a headless server? Thermal/power testing needed.
-- [ ] What's the electricity cost at current German rates for 24/7 operation? (~65W TDP, ~€0.30/kWh ≈ €14/month)
+- [ ] Can the Beelink run 24/7 reliably headless? **Reframed:** thermals are fine on this
+      platform; the risk is the documented Intel E610 NIC firmware deadlock under
+      sustained GPU+network load — Phase 0 NIC gauntlet (NVM ≥1.30 + BIOS ≥1.08 + 4h
+      soak test + USB NIC fallback) before any 24/7 commitment.
+- [x] ~~Electricity cost for 24/7?~~ **Refined:** ~10–15W idle, 60–120W under load;
+      €15–25/month at a batch-heavy duty cycle (€0.30/kWh); TDP capped ~85–100W as the
+      NIC/thermal-margin trade.
 
 ---
 
@@ -181,6 +215,7 @@ All Claude session notes go in `./log/` with filename format: `YYYY-MM-DD-topic.
 |------|---------|
 | `README.md` | Repo overview |
 | `CLAUDE.md` | This file — Claude context |
+| `BEELINK-UPSKILL-INDEXING-PLAN.md` | **Master plan (2026-08-15)** — decision record (4 designs, 3-judge panel), Verified Facts Store + Newsroom Runner architecture, Phase 0 hardware runbook, phased to-dos, kill gates |
 | `VILSECKKI-FINAL-ARCHITECTURE.md` | Full VilseckKI RAG + services architecture |
 | `VILSECKKI-IMPLEMENTATION-PLAN.md` | RAG service implementation roadmap |
 | `AUTH-AND-BACKEND-COMPARISON.md` | Auth/backend options analysis |

@@ -215,7 +215,70 @@ Hachinohe-Station bilingual MEXT school plan targeting Misawa DoD contractors,
 updated 2026-08-12. This dashboard exists to keep that document alive and
 correct without manual research hours.)*
 
-<!-- FILLED FROM RESEARCH AGENT B -->
+### What the non-Tokyo landscape says (Aug 2026 scan)
+
+**Precedents that validate the Eastern Hill thesis:**
+
+- **Harrow International School Appi (Iwate)** — the direct regional precedent,
+  ~35 min down the same Tohoku Shinkansen corridor: opened 2022, held its
+  **first graduation June 2026** (34 students, 146 university offers). Its
+  model: resort-integrated boarding + explicit East-Asia (esp. China) feeder
+  bet. Proof that a rural Tohoku international school can work — *and* a
+  concentration-risk case study (its demand is a bet on continued Chinese
+  outbound flows).
+- **OCSI Okinawa (>580 students, near Kadena/Futenma)** is markedly larger
+  than every other regional school surveyed — the strongest available evidence
+  that a **stable military English-speaking community supports outsized
+  civilian international-school scale**. That is precisely the Misawa bet.
+- **Phased rollout is the proven capital pattern:** Malvern Tokyo 150→~400
+  pupils by year 3; Rugby School Japan 140→300 by year 3; NLCS Kobe adding one
+  grade per year toward a 2028 boarding campus. Nobody opens at full K-12
+  capacity — Eastern Hill's financial model should assume the same ramp.
+- **Municipal/developer land de-risking is the most common structural success
+  factor** — Rugby (Mitsui Fudosan land), UWC ISAK (Karuizawa town tax
+  partnership), and now *active prefecture-level courting*: Shizuoka City
+  signed a provisional land deal Aug 2025 for a 2028 school; Nara announced an
+  attraction push Feb 2026; Tokyo launched an operator-matchmaking portal Oct
+  2025. **Strategic upgrade for Eastern Hill: rather than buying commercial
+  land at market price (current plan: ¥200–500M), pursue a Hachinohe/Aomori
+  誘致 (school-attraction) partnership — the wave of municipal courting means
+  a city-provided site is now a realistic ask.**
+- **JINIS (Hiroshima)** shows Article 1 (一条校) status — full Japanese
+  credential recognition — widens the domestic market beyond the 各種学校
+  route; consistent with Eastern Hill's MEXT-recognition USP.
+
+**Failure modes to design against:**
+
+1. **Community opposition + viral misinformation (the 2026 lesson):** Global
+   Indian Education *withdrew* from its Sapporo school project this year after
+   anti-immigration protests and social-media rumor campaigns — despite the
+   city council unanimously rejecting the petitions. The story broke only in
+   Hokkaido regional press (HTB/HBC/Hokkaido Shimbun), never in education
+   trade media. Community-relations groundwork in Hachinohe is not optional,
+   and this signal class is invisible without Japanese-language regional-press
+   monitoring — i.e., exactly what the Beelink reads nightly.
+2. **Revenue ≠ solvency:** Château School (Tokyo, ~¥500M/yr tuition revenue)
+   was forcibly closed in 2023 over ¥70M unpaid rent.
+3. **Day-school-only plateau:** Nagoya International School slid 496→426
+   students (2017–2023) — pure local-expat-demand models decline as corporate
+   postings shift; boarding or a captive niche (Misawa) is the hedge.
+
+### The nightly signal watch (what RegWatch + Beelink monitor)
+
+| Signal | Source | LLM task |
+|---|---|---|
+| New-school / 誘致 announcements (earliest signal, months ahead of directories) | Prefectural/municipal press pages, developer corporate news | Extract brand, site, capacity, opening target → structured row; flag NEW |
+| Accreditation changes | CIS news feed (clean diffable), NEASC status column, IBO/IBAJ candidate lists | Diff status; candidate = growth signal, lapse = distress |
+| Enrollment | US State Dept per-school fact sheets (best structured source), school pages | Extract figure + date, YoY delta, flag >10% moves |
+| Tuition changes | School fee PDFs/pages (incl. DoDEA tuition rates — Eastern Hill's price anchor) | Table extraction + diff |
+| Teacher-recruitment velocity | Search Associates (26 JP schools), Schrole, GaijinPot | Weekly per-school posting counts; surge = expansion *or* turnover — disambiguate via co-signals |
+| Community-opposition early warning | Regional JP press + Yahoo News: 「インターナショナルスクール」+ (反対/デマ/抗議/撤退) | Summarize event, actors, outcome — the Sapporo-class signal |
+| Feeder-market shifts | School nationality disclosures, CN/HK/TW outbound-education policy news | Track composition; flag concentration risk (the Harrow Appi exposure) |
+| Land for the site search | reinfolib land prices + SUUMO/Furukawa listings near Hachinohe Station (≥5,000m², 商業地域) | Same pipeline as Dashboard 2 — §6 |
+
+Verification caveats from the scan: enrollment figures conflict across sources
+(e.g. Osaka International School ~270 vs ~489) — always cross-check State
+Dept/IBO/school primary sources; ISC Research's Japan report is likely gated.
 
 ## 6. Dashboard 2: Tohoku Land & Akiya Watch (Japanese Real Estate)
 
@@ -267,10 +330,21 @@ Monthly reinfolib/e-Stat refresh (no LLM) → weekly polite crawl of ToS-cleared
 
 cs.AI+cs.CL+cs.LG ≈ **315+ new papers/day** (2025 rate; higher now). Stages: (1) arXiv API pull, last 24h → (2) **triage** on a 4–8B model (~sub-hour for 300–400 abstracts), scored against a dissertation-relevance profile, *ensembled per FUSE* to cut false negatives → (3) top 15–40 shortlist → (4) **deep-read** structured extraction (method, claim, relation to open questions) on Qwen3.5-35B-A3B (est. 40–80 papers/night) or 70B dense for the top few (15–30/night) — ROCm+FA, JSON-schema output → (5) 2–3-sample self-consistency on flagged extractions (anti-hallucination) → (6) embedding cross-reference against DEVLOG/CLAUDE open questions ("this answers open question X") → (7) sleep-time-compute precompute of likely morning questions → (8) morning digest + candidate DEVLOG/Open-Questions rows. All throughputs are planning estimates until the first-party benchmark lands.
 
-## 8. What To Do First
+## 8. What To Do First (respecting the 15–25 min/day budget)
 
-<!-- FILLED AFTER SECTIONS 5-7 -->
+| # | Action | Effort | Why first |
+|---|---|---|---|
+| 1 | **Beelink config pass**: apply the §1 systemd env block; verify with `ollama ps` (actual context), `journalctl -u ollama` (flash attention engaged) | ~30 min once | Every later job inherits it; kills the silent-truncation risk |
+| 2 | **Point the Mac at the Beelink**: `OLLAMA_HOST=http://<beelink-tailscale-ip>:11434` on the Mac | ~5 min | Instantly fixes the qwen3.8 pain; makes `ollama launch pi`/`claude` on the Mac run on Beelink compute |
+| 3 | **First-party benchmark evening**: model (incl. `qwen3.5:122b`, `qwen3.8:27b`, 35B-A3B) × quant × ROCm-vs-Vulkan × context; record tok/s + prefill | 1 evening, mostly unattended | Closes two CLAUDE.md open questions; published numbers conflict 6×; it's a citable dissertation artifact (§7) |
+| 4 | **Apply for the free API keys now**: reinfolib (~5 business days lead) + e-Stat `appId` (instant) | ~15 min | Zero cost, lead-time-bound — unblocks Dashboard 2's data backbone |
+| 5 | **RegWatch: add `eastern_hill` product** (YAML only): CIS news, MEXT lists, Aomori/Iwate regional-press queries, Search Associates/Schrole pages, Hachinohe/Aomori municipal pages; triage prompts per §5 table | 1–2 evenings | Reuses 100% existing plumbing; the school dashboard starts *watching* before the pretty dashboard exists |
+| 6 | **arXiv miner v0**: triage-only (small model, FUSE-style 2-prompt ensemble) → morning digest email | 1–2 evenings | Immediate daily dissertation value; deep-read stage added after #3 says which model to use |
+| 7 | **Nightly deep-read + static dashboard render** (per-domain SQLite → HTML, served over Tailscale) | Iterative | The actual Nightwork product; build after 1–6 are humming |
+| 8 | Backlog: `OllamaAdapter` `num_ctx`/`keep_alive`/`format` options (upskill-news Iteration B); AMD Lemonade NPU test; municipal akiya-bank ToS triage/outreach | — | Recorded here so no thread re-discovers them |
 
 ## Sources
 
-<!-- CONSOLIDATED AT END -->
+Ollama: [ollama launch blog](https://ollama.com/blog/launch) · [Claude Code integration docs](https://docs.ollama.com/integrations/claude-code) · [qwen3.8:27b library page](https://ollama.com/library/qwen3.8:27b) · [env-var reference (ModelPiper)](https://modelpiper.com/blog/ollama-environment-variables) · context-length default discussion ([SSD Nodes](https://www.ssdnodes.com/learn/ollama-context-length-num-ctx), [HN](https://news.ycombinator.com/item?id=42833427)).
+
+Domain research (Aug 2026 agent scans; per-claim citations inline in §5–§7): MLIT reinfolib ([site](https://www.reinfolib.mlit.go.jp/), [ToS](https://www.reinfolib.mlit.go.jp/help/termsOfUse/)), [e-Stat API](https://www.e-stat.go.jp/api/), [MLIT akiya-bank directory](https://www.mlit.go.jp/totikensangyo/const/akiyabank_link.html); Harrow Appi first graduation ([PR Newswire](https://www.prnewswire.com/apac/news-releases/harrow-international-school-appi-japan-celebrates-historic-first-graduation-class-of-2026-earns-offers-from-world-leading-universities-302811712.html)), Sapporo GIE withdrawal ([HTB](https://www.htb.co.jp/news/archives_38841.html), [Hokkaido Shimbun](https://www.hokkaido-np.co.jp/article/1344318/)), [CIS news feed](https://www.cois.org/about-cis/news/); Sleep-time Compute ([2504.13171](https://arxiv.org/abs/2504.13171)), Large Language Monkeys ([2407.21787](https://arxiv.org/abs/2407.21787)), FUSE ([2604.18547](https://arxiv.org/abs/2604.18547)), FindTheFlaws ([2503.22989](https://arxiv.org/abs/2503.22989)), process-data synthesis ([2605.02395](https://arxiv.org/abs/2605.02395)), judge reliability ([2606.19544](https://arxiv.org/abs/2606.19544)); Strix Halo benchmarks ([kyuz0 toolboxes](https://kyuz0.github.io/amd-strix-halo-toolboxes/), [AMD ROCm blog](https://rocm.blogs.amd.com/artificial-intelligence/ryzen-uma-llm/README.html)) — **numbers conflict across sources; treat as unverified until the first-party benchmark (§8 #3)**.

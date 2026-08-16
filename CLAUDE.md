@@ -186,6 +186,8 @@ All Claude session notes go in `./log/` with filename format: `YYYY-MM-DD-topic.
 | `AUTH-AND-BACKEND-COMPARISON.md` | Auth/backend options analysis |
 | `VILSECKKI-DATA-FACTORY-MARKET-INSIGHTS.md` | **Data Factory market research** — demand assessment, pricing, channels, risks |
 | `GRANT-APPLICATION-PLAN.md` | **Bavarian grant plan** — Digitalbonus Plus + Start?Zuschuss! eligibility, application steps, pitch framing |
+| `docs/OLLAMA-NIGHTWORK-DASHBOARDS.md` | **Nightwork strategy** — Ollama defaults audit, `ollama launch` agents, overnight batch dashboards (schools/real-estate/arXiv) on the RegWatch skeleton |
+| `regwatch/` | Self-hosted LLM-triaged web change detection (changedetection.io + Ollama) — the Nightwork skeleton |
 | `log/` | Session notes |
 | `../vilseckki-datafactory-app/CLAUDE.md` | **Data Factory** — Claude context (spun out repo) |
 | `../vilseckki-datafactory-app/LECHAT-PROJECT-DESCRIPTION.md` | Data Factory — Mistral/Le Chat briefing |

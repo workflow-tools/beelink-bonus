@@ -88,9 +88,14 @@ the `iperf3` counterpart for the NIC soak.
       (if that partition survives — saves a ~77GB download) or `ollama pull`
       overnight. Stand up `llama-server` (Vulkan) alongside for the bake-off.
 - [ ] **A5 Benchmark gate** `[CC@beeteam]`: qwen3.5:122b decode+prefill on
-      Ollama/ROCm **vs** llama-server/Vulkan; one 30B-A3B-class extractor
-      candidate on real admissions-page extraction prompts (quality + speed —
-      decides two-tier extraction); bge-m3 chunks/hour; idle/load watts.
+      Ollama/ROCm **vs** llama-server/Vulkan; extractor bake-off on real
+      admissions-page extraction prompts (quality + speed — decides two-tier
+      extraction): one 30B-A3B-class MoE candidate **and** `qwen3.8:27b`
+      (dense, native vision, Apache 2.0, official Ollama model, released Aug
+      2026 — AMD's Day-0 blog measured ~24.5 tok/s on Strix Halo via Vulkan
+      MTP=4; if its page/CDS-PDF extraction matches the 122B, the vision
+      escalation tier shrinks from ~90GB resident to ~24GB); bge-m3
+      chunks/hour; idle/load watts.
       **Record in `mistral/open-source-models/BEELINK-FIT.md`, commit, push.**
       This closes the plan's serving-binary and batch-window questions.
 - [ ] **A6 NIC soak** `[CC@beeteam]` + `[MAC]` as iperf3 server: 4h of

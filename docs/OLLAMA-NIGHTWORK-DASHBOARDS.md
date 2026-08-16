@@ -117,6 +117,60 @@ images.**
 
 ---
 
+## 2.5 Harness vs. Brain vs. Host — the Mental Model
+
+The `ollama launch` catalog is confusing because it mixes three separable
+layers. Getting these straight decides the whole rig design:
+
+- **Harness** — the agent *program*: the loop that takes model output, executes
+  the tools it asked for (read/write/bash), and feeds results back. Claude
+  Code, Codex, OpenCode, Copilot CLI, Droid, DeepSeek Harness, Pi, Hermes, and
+  OpenClaw are all harnesses.
+- **Brain** — whatever model generates the text inside that loop (Claude via
+  the Anthropic API; qwen3.5:122b / qwen3.8:27b via Ollama).
+- **Host** — where each piece physically runs. They need not be the same
+  machine: harness on the MacBook, brain on the Beelink over Tailscale.
+
+### The three configurations
+
+| # | Config | What it is | Character |
+|---|---|---|---|
+| 1 | Claude harness + Claude brain | Normal Claude Code (paid plan) | Smartest; metered |
+| 2 | Claude harness + Qwen brain | `ollama launch claude` → Ollama's Anthropic-compatible API | Free, private, unlimited; junior-grade judgment — give it narrow, well-specified, verifiable tasks |
+| 3 | **Claude brain commanding Qwen workers** | A real Claude session (Claude Code on the Mac) calls the Beelink's Ollama API as a *tool* (`curl http://<beelink>:11434/api/generate`, scripts, MCP) | **The economic sweet spot: paid tokens for judgment and design, free tokens for volume.** The upskill-news `OllamaAdapter` is this pattern, programmatic |
+
+One-way street: any harness can use a local brain, but Claude-the-model cannot
+be pulled into Ollama — Anthropic brains are API-only. And remote/cloud Claude
+sessions can't reach the Tailnet; config 3 runs from the Mac (or the Beelink
+itself).
+
+### The agent zoo, sorted
+
+| Agent | What it is | Relevance |
+|---|---|---|
+| Claude Code / Codex / OpenCode / Copilot CLI / Droid / DeepSeek Harness | Terminal *coding* agents — same loop, different vendors/polish; all re-pointable at Ollama | Claude Code + real Claude for serious work; any + local Qwen for free repetitive chores |
+| **Pi** ([pi.dev](https://pi.dev/), [Ollama docs](https://docs.ollama.com/integrations/pi)) | Mario Zechner's minimal coding agent: **four tools** (read/write/edit/bash) + short system prompt; everything else is extensions, which Pi can write for itself. The extracted minimal core of OpenClaw ([Ronacher](https://lucumr.pocoo.org/2026/1/31/pi/)) | Best *learning* harness — small enough to read completely. Good Mac-side client pointed at the Beelink |
+| **Hermes Agent** ([Ollama docs](https://docs.ollama.com/integrations/hermes), [local setup](https://hermes-agent.nousresearch.com/docs/guides/local-ollama-setup)) | Nous Research's self-improving *general* agent: 60+ tools, cross-session memory, autonomously creates reusable skills, 20+ messaging connectors (Telegram/Slack/WhatsApp…), MCP support, runs fully local | Not a coding agent — a persistent assistant daemon; the closest ready-made "agent living on the Beelink 24/7." **Caution:** self-improving + broad tool access + unattended = an experiment, not infrastructure. Sandbox and observe for weeks first |
+| **OpenClaw** | Persistent personal AI, 100+ skills (Pi is its core) | Same promise and same caution as Hermes |
+
+### Rig-design rules that fall out
+
+1. **Beelink = the model shelf, always on:** `qwen3.5:122b` MoE as workhorse
+   (122B total, ~10B active per token → near-small-model speed with big-model
+   knowledge on a bandwidth-bound machine — note a dense 27B generates
+   *slower* than this 122B MoE, since every token reads all 27B weights vs.
+   ~10B active); `qwen3.8:27b` when vision matters; an 8B for triage.
+2. **Harnesses run anywhere; brains stay on the Beelink** (Tailscale +
+   `OLLAMA_HOST`).
+3. **Pipelines are scripts, not harnesses.** Deterministic Nightwork
+   (extract/normalize/diff) wants plain Ollama API calls with JSON-schema
+   outputs — a harness adds nondeterminism a cron job doesn't want. Reserve
+   harness-agents for open-ended chores ("the scraper broke — find out why and
+   fix the selector"), and reserve Hermes-class autonomy for supervised
+   experiments.
+4. **Claude is the architect and reviewer** (config 3): designs prompts and
+   YAML, dispatches bulk work to the Beelink, audits the results.
+
 ## 3. Why the MacBook Air Crawled (and the Fix)
 
 Observed: `qwen3.8:27b` on the MacBook Air (M5, 24GB) took ~15 minutes to

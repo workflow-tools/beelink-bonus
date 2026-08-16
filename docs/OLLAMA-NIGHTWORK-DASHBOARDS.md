@@ -219,11 +219,53 @@ correct without manual research hours.)*
 
 ## 6. Dashboard 2: Tohoku Land & Akiya Watch (Japanese Real Estate)
 
-<!-- FILLED FROM RESEARCH AGENT A -->
+### Data backbone (no LLM needed — plain cron + HTTP)
+
+| Source | What | Access |
+|---|---|---|
+| **MLIT 不動産情報ライブラリ (reinfolib)** — https://www.reinfolib.mlit.go.jp/ | ~5.47M transaction records (取引価格, quarterly since 2005), official land prices (地価公示/地価調査, annual since 1995), urban-planning/hazard layers | Free API key (apply, ~5 business days; `Ocp-Apim-Subscription-Key` header). ToS permits commercial use **with attribution** ("国土交通省 不動産情報ライブラリ"); no sublicensing. Endpoints: XIT001 (transactions), XPT002 (land-price points), XKT* (zoning/hazard). |
+| **e-Stat API** — https://www.e-stat.go.jp/api/ | 住宅・土地統計調査: municipal-level vacancy counts/rates incl. dilapidation status (腐朽・破損) | Free `appId`, instant issue |
+| **MLIT municipal akiya-bank link directory** — https://www.mlit.go.jp/totikensangyo/const/akiyabank_link.html | Curated per-municipality links to every akiya bank | Static page; the clean seed list |
+
+**⚠️ ToS landmine:** the two *national* akiya aggregators (LIFULL HOME'S 空き家バンク; At Home akiya-athome.jp, ~11.5K listings/908 municipalities) both restrict reuse — At Home's footer explicitly prohibits unauthorized reproduction, and LIFULL's API is invite-only. Apify scrapers for them exist, but that doesn't clear the ToS. The safe crawl targets are **independently-hosted municipal akiya banks** (e.g. 田子町 publishes PDFs on its own `.lg.jp` site) after a per-site robots/ToS triage — or, given the personal Tohoku network, *direct outreach to a few towns' 移住・定住 offices for explicit permission* (a competitor, AkiyaBanks.com, brands itself on exactly "no scraping" — the norm here is contested).
+
+### Where the nightly LLM is the moat
+
+The tabular layer is commoditized (Apify sells SUUMO/At-Home scrapes for pennies). Nobody found in the commercial scan (RENOSY, HowMa, IESHIL, 東京カンテイ — all urban/condo-focused; closest concept: AKIYA Revolution, Feb 2026) does the **unstructured-Japanese synthesis**:
+
+1. **Subsidy finder (highest value):** ~1,700 municipalities publish 移住支援金 / akiya-renovation subsidies in wildly inconsistent pages and PDFs. LLM-extract per program: amount, eligibility, deadline, application steps, contact — into a filterable EN/JP table. Pure batch extraction, ~free overnight, expensive via cloud APIs, and no commercial player's business model needs it. Aomori examples: prefecture ¥1M for 東京圏 movers with local employment; 黒石市 up to ¥600K akiya renovation; medical/welfare child-raising household top-ups.
+2. **Listing-detail extraction:** condition, renovation history, **接道状況** (road access — determines legal rebuildability), station access, structure — buried in free-text 物件概要 on small municipal sites. JSON-schema extraction job.
+3. **Comp cross-referencing:** join listings against reinfolib comps in the same area → "under/over comp median" or "zero trades in 10 years — thinly traded" flags. *Verify first:* rural reinfolib density may be sparse/suppressed — spot-check real API pulls for the Aomori watch-list before designing around it.
+4. **Distress-signal mining:** local-news sweeps for snow-collapse/demolition (Nikkei: 840 vacant homes collapsed under snow load in 5 years in heavy-snowfall zones — Aomori City is a full 特別豪雪地帯). An LLM-mined risk feed no listings site bothers with.
+5. **CJK normalization** — reuse `normalize_japanese()` selective-NFKC from the Data Factory verbatim.
+
+### Why Aomori specifically
+
+~98,800 vacant homes; 16.74% vacancy (15th nationally) but the **highest dilapidation rate of any prefecture** — the stock is uniquely far gone, which is exactly what makes condition-extraction + subsidy-matching valuable. All 40 municipalities in projected decline (−19.6% by 2035). And the watch-list overlaps the Eastern Hill site search: land near Hachinohe Station + teacher-housing candidates around Misawa are just entries in the same pipeline.
+
+### Nightly job sketch
+
+Monthly reinfolib/e-Stat refresh (no LLM) → weekly polite crawl of ToS-cleared municipal pages → nightly: normalize → JSON-schema extract (listings, subsidies) → comp join → weekly EN digest + map/table dashboard (with MLIT attribution). Open items: reinfolib rate limits (undocumented; back off on 429), per-site municipal ToS triage, rural comp density check.
 
 ## 7. Dashboard 3: arXiv Research Miner (Dissertation Support)
 
-<!-- FILLED FROM RESEARCH AGENT C -->
+### The literature literally names our strategy
+
+- **Sleep-time Compute** (Letta/Berkeley, [arXiv:2504.13171](https://arxiv.org/abs/2504.13171)) — precompute reasoning over a context *before* the query arrives: ~5× test-time compute reduction, up to +13% accuracy, 2.5× amortization across related queries. This is the citable name for the entire Nightwork pattern: spend the night pre-digesting so the morning session is answer-retrieval, not fresh reasoning.
+- **Large Language Monkeys** ([2407.21787](https://arxiv.org/abs/2407.21787)) lineage + 2026 follow-ups: small models + repeated sampling + verification punch far above their weight. **FUSE** ([2604.18547](https://arxiv.org/abs/2604.18547)) ensembles *unlabeled* weak verifiers to match supervised alternatives; weak 8B verifiers come within ~1% of much larger ones ([2506.18203](https://arxiv.org/abs/2506.18203)); **VibeThinker-3B** ([2606.16140](https://arxiv.org/abs/2606.16140)) shows a 3B model with test-time scaling competing with flagships. Net: the Beelink's "many cheap passes + small judges overnight" mode is the *research-endorsed* way to get outsized results from this class of hardware.
+- **Directly adjacent to the Data Factory:** **FindTheFlaws** ([2503.22989](https://arxiv.org/abs/2503.22989), AAAI 2026) — expert-annotated flawed-solution datasets for scalable oversight — and **Controllable & Verifiable Process Data Synthesis** ([2605.02395](https://arxiv.org/abs/2605.02395)) — inject template-aware errors into reasoning chains, verify non-derivability — are structurally near-identical to `flaw_injector.py` + `blind_extractor.py`. The dissertation can position "flaw survival rate" inside this published lineage.
+- **Warning shot for GRUND:** the LLM-judge reliability study ([2606.19544](https://arxiv.org/abs/2606.19544), 21 judges) found a *consistency-bias paradox* — judges with >0.95 test-retest reliability AND >0.10 position bias. Any debate-evaluation chapter needs an explicit judge-reliability audit, not naive agreement stats.
+
+### Hardware reality check (mid-2026)
+
+- **MoE on unified memory is the qualitative win:** reported Strix Halo numbers show Qwen3.5-35B-A3B (~42 tok/s) *outrunning a 9B dense model* (~29.8 tok/s) because only active params hit the bandwidth wall; 120B-class MoE reports range wildly (8.6–55 tok/s across sources). Backend guidance: Vulkan fast at short context but degrades past ~4K; **ROCm + flash attention for long-context deep-reads**.
+- **The conflicting numbers are themselves a dissertation finding:** no trustworthy first-party benchmark exists for the AI Max+ 395 class (GPU-addressable memory reported as 64GB *and* 96–110GB depending on source). A reproducible model×quant×backend×context benchmark suite on this unit closes the long-standing CLAUDE.md open question *and* is a citable methods artifact.
+- **NPU status (closes another open question):** absent from official Ollama and mainline llama.cpp; community forks exist; **AMD Lemonade** (NPU for time-to-first-token, GPU for generation) is the credible path — test that, don't wait for llama.cpp.
+- **Honest economics baseline:** the fair cloud comparison is Anthropic/OpenAI **Batch APIs at flat −50%**, not real-time pricing. Local still wins on privacy + fixed cost at nightly-every-night volume, but cite the batch baseline, not list price.
+
+### Nightly pipeline (staged, sized to real volume)
+
+cs.AI+cs.CL+cs.LG ≈ **315+ new papers/day** (2025 rate; higher now). Stages: (1) arXiv API pull, last 24h → (2) **triage** on a 4–8B model (~sub-hour for 300–400 abstracts), scored against a dissertation-relevance profile, *ensembled per FUSE* to cut false negatives → (3) top 15–40 shortlist → (4) **deep-read** structured extraction (method, claim, relation to open questions) on Qwen3.5-35B-A3B (est. 40–80 papers/night) or 70B dense for the top few (15–30/night) — ROCm+FA, JSON-schema output → (5) 2–3-sample self-consistency on flagged extractions (anti-hallucination) → (6) embedding cross-reference against DEVLOG/CLAUDE open questions ("this answers open question X") → (7) sleep-time-compute precompute of likely morning questions → (8) morning digest + candidate DEVLOG/Open-Questions rows. All throughputs are planning estimates until the first-party benchmark lands.
 
 ## 8. What To Do First
 

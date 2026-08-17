@@ -66,7 +66,7 @@ quantized mid-size models, and nobody has checked. One afternoon settles it.
 
 | Context | Verdict on student traffic to the Beelink | What would have to be true |
 |---|---|---|
-| **(A) DoDEA / US public school** | **Infeasible for a self-built system**, even sited on campus. | An authorization to operate under DoDI 8510.01; FERPA's school-official exception requires the outside party be "under the direct control of the agency" (34 CFR 99.31(a)(1)(i)(B)); and — the item most often missed — **Section 508 conformance**, normally evidenced by a VPAT, for any ICT a federal agency deploys. A teacher-built portal will never have one. This arrives *before* the privacy discussion. |
+| **(A) DoDEA / US public school** | **Infeasible for a self-built system**, even sited on campus. | An authorization to operate under DoDI 8510.01, and — the item most often missed — **Section 508 conformance**, normally evidenced by a VPAT, for any ICT a federal agency deploys. A teacher-built portal will never have one, and that objection arrives *before* the privacy discussion. **Correction (2026-08-17): DoDEA is run by the Department of Defense, not the Department of Education, and is therefore not a FERPA institution.** Its student-records regime runs through the Privacy Act and DoD/DoDEA issuances. An earlier draft of this document wrongly applied FERPA's school-official test here; the practical conclusion is unchanged, but cite the right authority. |
 | **(B) Private / international school (Germany)** | **Workable.** Local hosting is a selling point here rather than a liability. | The school is the controller: an Art. 28 processing agreement, a documented lawful basis, an Art. 35 DPIA (children's data plus new technology), Art. 30 records. Plus an honest conflict to manage — teacher and vendor in one person. |
 | **(C) After-school club, co-op, or tutoring** | **Works, and is where to start.** | Direct parental authorization, small cohort, not school-sponsored (a school-*sponsored* club collapses back into (A)). Note the trade: removing the school removes the blockers **and** removes the counsellor you would escalate a disclosure to. Charging money makes it worse, not better — it converts a hobby into a commercial AI service for minors. |
 | **(D) Your own children** | **Fully feasible today.** | Nothing. This is where to prototype. |
@@ -166,12 +166,13 @@ security team to escalate. The cost is honest: **LAN-only means async access mea
 building"** — library hours or study hall, not 2 a.m. from home. Given §6, that constraint is
 a feature.
 
-**One hard prerequisite:** this machine currently holds VilseckKI client documents and a
-notary's corpus. A German *Notar* is a `§ 203 StGB` professional-secrecy holder, and since
-2017 those obligations extend to service providers. An internet-or-classroom-reachable
-service on the same host is not an acceptable neighbour for that data. **Either the notary
-corpus moves off this machine before students touch it, or students get a different
-machine.** Container isolation is not a security boundary against a motivated teenager.
+**A host-hygiene note.** The Beelink carries no commercial workload today, so there is no
+sensitive third-party data on it — an earlier draft of this document assumed a notary-client
+corpus that no longer exists, since that exploration was dropped as too much risk for the
+reward. The rule still holds prospectively: if this machine ever carries client data under a
+professional-secrecy or contractual duty, it stops being an acceptable host for a service
+students can reach, because container isolation is not a security boundary against a
+motivated teenager. **Decide which role the machine plays before it plays both.**
 
 ---
 
@@ -319,10 +320,13 @@ unrestricted AI use against an "explanation gate" and found near-identical shipp
 a large gap in ability to repair injected bugs afterward. It also roughly *doubled*
 time-on-task. Plan for both effects.
 
-**Week-by-week**, with a warning attached: this arc is sized for one section. A high school
-teacher has four to six sections and 120–160 students, and Week 4's individual defenses at
-eight minutes each become roughly twenty hours of one-on-one contact across a full load. **For
-a full teaching load, either run it in one section, or halve the assessment ritual.**
+**Week-by-week**, with a scale note. This arc is sized for one section. A teacher running
+four to six sections of the *same* course would face 120–160 students, and Week 4's individual
+defenses at eight minutes each would become roughly twenty hours of one-on-one contact. A
+**mixed-assignment teacher** — several different preps rather than many sections of one, which
+is the likelier DoDEA posture — is a much better fit, because the unit runs in one class while
+the others keep a normal schedule. **Run it in one section at a time.** That single constraint
+keeps the plan inside a working week.
 
 - **Week 0 (teacher).** Build the exemplar end-to-end and *time it* — if it takes you more
   than three hours, the scope is too big. Confirm device image and network reachability. Write
@@ -454,7 +458,9 @@ strongest argument for doing so. **Weekly ops during the unit:** 4–10 hours, p
 plus alert triage, which is unmeasured and is the number that decides everything.
 
 **Compatible with a full-time job?** For 6–10 students, yes — roughly 4–6 hours a week during
-the four weeks. For a full teaching load of 120–160 students, no, not as specified. And the
+the four weeks. For one section of 25–30 at a time, which is what a mixed-assignment teaching
+load allows, it is tight but workable. Only running it simultaneously across four to six
+sections of the same course breaks it. And the
 comparison that should govern the decision: thirty students' worth of tokens on a hosted model
 for four weeks is tens to low hundreds of euros, while the compliance work around a
 self-hosted alternative is weeks of your time. **The only thing that justifies the local leg is
@@ -472,7 +478,7 @@ one untested assumption.
 | 3 | Is this unit an affected board revision? | `lspci \| grep -i ethernet`. Five minutes. |
 | 4 | Real prefill/decode and multi-slot behaviour on this unit, ROCm vs Vulkan | `llama-bench` plus concurrent load. Every capacity number here is third-party-calibrated. |
 | 5 | Guardrail false-positive rate on realistic teen prompts | Run the chain over 200–500 synthetic prompts (creative writing with violence, health topics, game design, lyrics, genuine distress). One evening. **This is the go/no-go on your time budget.** |
-| 6 | Can the notary corpus move off this machine? | If not, students need different hardware. Non-negotiable. |
+| 6 | If the Beelink later takes on client workloads, can they be isolated from the student service? | Decide the machine's role before it plays two. Not a live issue today — it carries no commercial data. |
 | 7 | Ethics-counsel read on the UG/federal-employment question, for the actual fact pattern | Agency ethics counsel, not a web search. |
 | 8 | Are Crostini and PWA install permitted for the student OU? | One email to the school's IT office; both are admin-gated. |
 

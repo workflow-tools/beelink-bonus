@@ -22,7 +22,7 @@ The machine is owned by Ryan Hill, founder of ML Upskill Agents UG (haftungsbesc
 |------|--------|
 | **Chip** | AMD Ryzen AI Max+ 395 (Strix Halo) |
 | **RAM** | 128GB LPDDR5X unified memory (CPU + GPU shared) |
-| **GPU** | Radeon 890M — 40 RDNA 3.5 CUs, accesses full 128GB |
+| **GPU** | Radeon **8060S** (gfx1151) — 40 RDNA 3.5 CUs, accesses full 128GB. *(Corrected 2026-08-17: this table previously said "890M", which is the 16-CU Strix Point part. Benchmarks worth citing are 8060S/gfx1151 results.)* |
 | **NPU** | XDNA 2 (~50 TOPS) — not yet well-supported by inference frameworks |
 | **CPU** | 16 Zen 5 cores |
 | **Key insight** | Apple Silicon-class unified memory on AMD. GPU can address all 128GB, enabling large model inference that discrete GPU machines cannot match at this price point. |
@@ -41,6 +41,8 @@ The machine is owned by Ryan Hill, founder of ML Upskill Agents UG (haftungsbesc
 
 ```bash
 export HSA_OVERRIDE_GFX_VERSION=11.0.0   # RDNA 3.5 compatibility flag
+# NOTE (2026-08-17, unverified): community guidance for gfx1151 suggests 11.5.1 rather
+# than 11.0.0. Test both on this unit — see docs/CLASSROOM-BUILD-LAB.md §12.
 ollama serve                              # Ollama auto-detects 890M GPU
 # Verify: rocm-smi in a second terminal while running inference
 ```
@@ -187,6 +189,7 @@ All Claude session notes go in `./log/` with filename format: `YYYY-MM-DD-topic.
 | `VILSECKKI-DATA-FACTORY-MARKET-INSIGHTS.md` | **Data Factory market research** — demand assessment, pricing, channels, risks |
 | `GRANT-APPLICATION-PLAN.md` | **Bavarian grant plan** — Digitalbonus Plus + Start?Zuschuss! eligibility, application steps, pitch framing |
 | `docs/OLLAMA-NIGHTWORK-DASHBOARDS.md` | **Nightwork strategy** — Ollama defaults audit, `ollama launch` agents, overnight batch dashboards (schools/real-estate/arXiv) on the RegWatch skeleton |
+| `docs/CLASSROOM-BUILD-LAB.md` | **Classroom design study** — students building apps against a teacher-built portal + the Beelink: governance fork, age-policy reality, capacity math, safety, 4-week unit |
 | `regwatch/` | Self-hosted LLM-triaged web change detection (changedetection.io + Ollama) — the Nightwork skeleton |
 | `log/` | Session notes |
 | `../vilseckki-datafactory-app/CLAUDE.md` | **Data Factory** — Claude context (spun out repo) |

@@ -189,6 +189,8 @@ All Claude session notes go in `./log/` with filename format: `YYYY-MM-DD-topic.
 | `VILSECKKI-DATA-FACTORY-MARKET-INSIGHTS.md` | **Data Factory market research** — demand assessment, pricing, channels, risks |
 | `GRANT-APPLICATION-PLAN.md` | **Bavarian grant plan** — Digitalbonus Plus + Start?Zuschuss! eligibility, application steps, pitch framing |
 | `docs/OLLAMA-NIGHTWORK-DASHBOARDS.md` | **Nightwork strategy** — Ollama defaults audit, `ollama launch` agents, overnight batch dashboards (schools/real-estate/arXiv) on the RegWatch skeleton |
+| `service-lines/README.md` | **Service-line portfolio** — arbitrated ranking of ways to monetise the inference layer, the kill list, and the finding that none of these lines actually needs the Beelink |
+| `service-lines/` | Line docs (spouse workshops, DoDEA/institutional PD, Upskill News schools), the gated teaching-portal spec, market evidence, and the hostile cross-document review |
 | `docs/CLASSROOM-BUILD-LAB.md` | **Classroom design study** — students building apps against a teacher-built portal + the Beelink: governance fork, age-policy reality, capacity math, safety, 4-week unit |
 | `regwatch/` | Self-hosted LLM-triaged web change detection (changedetection.io + Ollama) — the Nightwork skeleton |
 | `log/` | Session notes |

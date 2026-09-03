@@ -1,23 +1,37 @@
-# Amprion GmbH — Netzanschluss capacity publications.
-# Landing page found by scanning amprion.net's root (the obvious /Netzanschluss/ paths 404).
-# Verified 2026-09-03: the page states "Diese Karte dient der unverbindlichen Orientierung"
-# — the promulgation tell: non-binding => no retention duty => no mandated archive.
+# Amprion GmbH — "Darstellung der potenziellen Netzanschlussmöglichkeiten und der Kundenprojekte"
+# The Schaltfeld series: which substations (Schaltanlagen) have at least one free bay (Schaltfeld)
+# plus connection capacity, shown green/red on a map, with a supplementary prose document.
+#
+# Characterised 2026-09-03 by fetching the page [HIGH]:
+#   Disclaimer (verbatim): "Die Karten inklusive des ergänzenden Dokuments dienen der unverbindlichen
+#   Orientierung und geben eine Indikation. Amprion stellt die Daten ausschließlich zu Informationszwecken
+#   nach Können und Vermögen sowie ohne Gewähr für Richtigkeit und Vollständigkeit zur Verfügung.
+#   Änderungen sind jederzeit möglich."  -> non-binding => no retention duty => no mandated archive.
+#   Categories (verbatim): „Anschluss voraussichtlich realisierbar“ (grün), „Anschlussmöglichkeit nicht gegeben“ (rot).
+#   Assets on 2026-09-03 (all Last-Modified Thu, 04 Jun 2026 13:17:37 GMT):
+#     Karte-ueber-potenzielle-Netzanschlussmoeglichkeiten-04.2026.pdf            535,262 B
+#     Ergaenzendes-Dokument-zu-potenziellen-Netzanschlussmoeglichkeiten-04.2026.pdf 275,030 B
+#     2026.04_Kundenprojekte_v2.pdf                                              412,196 B  (note "_v2": revised in place)
+#     (a rendered PNG of the map is embedded via <img>, not offered as a link; not captured — it is a
+#      derivative of the map PDF, and chasing <img> would sweep up every icon on the page)
+#   Two filename conventions on one page ("-04.2026" suffix vs "2026.04_" prefix): never construct URLs.
+#   The section index one level up (…/Netzanschluss/) links only a VDE FNN grid overview PDF — wrong page.
 source_id: de-tso-amprion-netzanschluss
 publisher: Amprion GmbH
-landing_url: https://www.amprion.net/Strommarkt/Netzkunden/Netzanschluss/
+landing_url: https://www.amprion.net/Strommarkt/Netzkunden/Netzanschluss/Darstellung-der-potenziellen-Netzanschlussmoeglichkeiten-und-der-Kundenprojekte.html
 
-# PROVISIONAL until the publisher's own cadence statement is read and quoted here.
-declared_cadence: monthly
-declared_cadence_evidence: "PROVISIONAL — not yet read from the page; replace with a verbatim quote + URL"
+# The page says the assessment happens "im Rahmen des zyklischen Reifegradverfahrens" but states no period.
+# Quarterly is an ASSUMPTION [LOW] chosen so the staleness alarm is not silent; replace with the observed
+# cadence after two editions have been captured, or with a verbatim quote if Amprion states one.
+declared_cadence: quarterly
+declared_cadence_evidence: "[LOW] 'zyklischen Reifegradverfahrens' (no period stated); files dated 04.2026, Last-Modified 2026-06-04; Reifegradverfahren started 2026-04-01 per the section index"
 
-# PROVISIONAL. Polarity is never implicit: does Amprion list where connection IS
-# possible, or where it is NOT? Verify before any extraction; getting it wrong
-# inverts every answer silently. Allowed: lists_where_possible | lists_where_not_possible | lists_state
+# Both states are listed explicitly (green AND red), so this is a state map, not a one-sided list.
 polarity: lists_state
 
 # Overridden by LONGSERIES_CONTACT in the environment; set a real mailto: there.
 contact: "https://github.com/workflow-tools/beelink-bonus"
-accept_extensions: [".pdf", ".xlsx", ".xls", ".csv", ".zip"]
-min_payload_bytes: 4096
+accept_extensions: [".pdf"]
+min_payload_bytes: 50000
 licence: none-analysed
-licence_evidence_url: null
+licence_evidence_url: https://www.amprion.net/Strommarkt/Netzkunden/Netzanschluss/Darstellung-der-potenziellen-Netzanschlussmoeglichkeiten-und-der-Kundenprojekte.html

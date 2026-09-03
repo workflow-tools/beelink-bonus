@@ -34,6 +34,11 @@ def evaluate(run: "RunResult", config: SourceConfig, *, last_change_at: datetime
         alerts.append(Alert("P0", "LANDING_VANISHED",
                             f"{config.source_id}: landing page {run.landing_url} returned {run.landing_status}. "
                             f"Either the section moved (needs a human) or the source is gone."))
+    elif run.failed:
+        alerts.append(Alert("P1", "LANDING_UNREACHABLE",
+                            f"{config.source_id}: landing page {run.landing_url} could not be fetched "
+                            f"(status {run.landing_status}, {run.error}). Unreachable is a routing problem, "
+                            f"not a finding: check the network before concluding anything about the source."))
 
     for d in run.dispositions:
         if d.get("disposition") in ("new", "changed") and int(d.get("bytes") or 0) < config.min_payload_bytes:

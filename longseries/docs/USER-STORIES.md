@@ -90,6 +90,23 @@ Acceptance:
 - `test_landing_410_raises_landing_vanished`
 - `test_landing_vanished_produces_p0_alert`
 
+## US-05b Unreachable is not vanished
+
+As the operator working from a container or a hotel network,
+I want a landing page that cannot be fetched (connection refused, DNS,
+timeout, persistent 5xx) recorded as a *failed run with a P1
+`LANDING_UNREACHABLE`*, never as the P0 `LANDING_VANISHED`,
+so that a routing problem is never written into the record as though the
+source were gone.
+
+Why: `web.archive.org` was blocked from an agent container and fine from a
+laptop; that one difference nearly decided a whole project. The manifest is
+still written, so the gap in the series is visible and explained.
+
+Acceptance:
+- `test_landing_unreachable_is_a_failed_run_with_p1_not_p0`
+- `test_landing_persistent_5xx_is_a_failed_run_with_p1`
+
 ## US-06 Polite, identifiable, retrying fetches
 
 As the archive engine,

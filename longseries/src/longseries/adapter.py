@@ -45,6 +45,7 @@ class RunResult:
     dispositions: list[dict]
     alerts: list[Alert]
     failed: bool
+    error: str | None = None
 
     @property
     def counts(self) -> dict:
@@ -161,6 +162,7 @@ class BaseAdapter:
                 "urls": run.dispositions,
                 "counts": run.counts,
                 "failed": run.failed,
+                "error": run.error,
                 "alerts": [a.as_dict() for a in run.alerts],
             })
             self.store.write_manifest(sid, cid, manifest)
@@ -170,6 +172,12 @@ class BaseAdapter:
             landing = self.fetch_landing()
         except LandingVanished as e:
             return finish(RunResult(cid, sid, now, None, self.config.landing_url, e.status, None, None, [], [], failed=True))
+        except httpx.HTTPError as e:
+            # Unreachable, or still 5xx after retries. NOT vanished: a routing problem is not a
+            # finding, and must never be recorded as though the source were gone.
+            status = e.response.status_code if isinstance(e, httpx.HTTPStatusError) else None
+            return finish(RunResult(cid, sid, now, None, self.config.landing_url, status, None, None, [], [], failed=True,
+                                    error=f"{type(e).__name__}: {e}"))
 
         landing_sha = self.store.write_snapshot(sid, cid, "landing.html", landing.content)
 

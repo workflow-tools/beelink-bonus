@@ -37,6 +37,17 @@ def test_discover_ignores_mailto_javascript_and_fragment_links(config, store, si
     assert not any(u.startswith(("mailto:", "javascript:")) or "#" in u for u in urls)
 
 
+def test_discover_only_follows_anchor_links_not_embedded_images(config, store, site):
+    """Discovery captures what the publisher OFFERS (<a href>), not what the page
+    EMBEDS (<img src>). Amprion embeds a rendered PNG of its capacity map; it is a
+    derivative of the linked PDF, and following <img> would sweep up every icon on
+    the page and fire a small-payload alert for each."""
+    config.accept_extensions = [".pdf", ".png"]
+    a = _mk(site, config, store)
+    html = '<a href="/d/map.pdf">Karte</a><img src="/d/map_720x0.png"><img src="/icons/logo.png">'
+    assert a.discover(html, "https://example.test/") == ["https://example.test/d/map.pdf"]
+
+
 def test_base_adapter_has_no_url_template_hook():
     """Architecture guardrail. The API must offer no place to construct URLs from
     dates. The one worked case where this mattered: naming convention changed
@@ -106,6 +117,29 @@ def test_landing_vanished_produces_p0_alert(config, store, site, now):
     assert any(al.severity == "P0" and al.code == "LANDING_VANISHED" for al in run.alerts)
     m = store.read_manifest(config.source_id, "c1")
     assert m["landing_status"] == 404, "even a failed run leaves a manifest"
+
+
+def test_landing_unreachable_is_a_failed_run_with_p1_not_p0(config, store, now):
+    """Connection refused / DNS / timeout is NOT 'vanished'. The skill's rule:
+    unreachable from my environment is a routing problem, not a finding."""
+    def down(request):
+        raise httpx.ConnectError("connection refused", request=request)
+    a = BaseAdapter(config, store, transport=httpx.MockTransport(down), sleeper=lambda s: None)
+    run = a.poll(now=now, capture_id="c1")
+    assert run.failed is True
+    assert run.landing_status is None
+    codes = {al.code: al.severity for al in run.alerts}
+    assert codes.get("LANDING_UNREACHABLE") == "P1"
+    assert "LANDING_VANISHED" not in codes
+    m = store.read_manifest(config.source_id, "c1")
+    assert m["failed"] is True and "ConnectError" in m["error"]
+
+
+def test_landing_persistent_5xx_is_a_failed_run_with_p1(config, store, site):
+    site.sequence(config.landing_url, [(503, b"")] * 10)
+    run = _mk(site, config, store).poll(capture_id="c1")
+    assert run.failed is True and run.landing_status == 503
+    assert any(al.code == "LANDING_UNREACHABLE" and al.severity == "P1" for al in run.alerts)
 
 
 # --------------------------------------------------------------- full poll

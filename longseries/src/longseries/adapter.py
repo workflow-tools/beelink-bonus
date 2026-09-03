@@ -1,17 +1,35 @@
+"""Discovery, politeness, retries, and the poll loop (US-02, US-04..06).
+
+Discovery is by scraping links from the landing page. There is deliberately
+no hook for building a URL from a date: in one worked case the naming
+convention changed three times in ten months and the landing page moved
+sections; a template-based collector would have returned zero rows every
+day and reported success, which is the same error as a self-constructed 404
+running unattended forever."""
 from __future__ import annotations
-from dataclasses import dataclass, field
-from datetime import datetime
+
+import time
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Callable
+from urllib.parse import urldefrag, urljoin, urlparse
 
 import httpx
+from bs4 import BeautifulSoup
 
-from .alerts import Alert
+from . import __version__
+from .alerts import Alert, evaluate
 from .config import SourceConfig
-from .store import ContentAddressedStore
+from .store import ContentAddressedStore, sha256_hex
 
 
 class LandingVanished(Exception):
-    """The landing page itself returned 404/410. P0."""
+    """The landing page itself returned 404/410. P0: the section moved or the source is gone."""
+
+    def __init__(self, url: str, status: int):
+        super().__init__(f"landing page vanished: {url} -> {status}")
+        self.url = url
+        self.status = status
 
 
 @dataclass
@@ -36,21 +54,149 @@ class RunResult:
         return c
 
 
+_SKIP_SCHEMES = ("mailto:", "javascript:", "tel:", "data:")
+
+
 class BaseAdapter:
     max_attempts = 3
+    retry_statuses = (429, 500, 502, 503, 504)
+    timeout_seconds = 60.0
+    inter_request_delay = 1.5  # seconds between document fetches; 1-2s is the floor for public bodies
 
     def __init__(self, config: SourceConfig, store: ContentAddressedStore, *,
                  transport: httpx.BaseTransport | None = None,
                  sleeper: Callable[[float], None] | None = None):
         self.config = config
         self.store = store
-        raise NotImplementedError
+        self._sleep = sleeper or time.sleep
+        # Honest, identifiable, with a way to reach us: this is the station-5
+        # withdrawal-risk mitigation, not politeness theatre.
+        ua = f"longseries/{__version__} (+{config.contact}; source={config.source_id})"
+        self.client = httpx.Client(
+            headers={"user-agent": ua, "accept": "*/*"},
+            transport=transport,
+            timeout=self.timeout_seconds,
+            follow_redirects=True,
+        )
+
+    # ------------------------------------------------------------ fetch
+    def _backoff(self, attempt: int) -> float:
+        return min(30.0, float(2 ** (attempt - 1)))
+
+    def _get(self, url: str) -> httpx.Response:
+        """GET with bounded exponential retry on 429/5xx and transport errors.
+        A 404/410 is returned immediately — a dead URL is never hammered."""
+        attempt = 0
+        while True:
+            attempt += 1
+            try:
+                response = self.client.get(url)
+            except httpx.TransportError:
+                if attempt >= self.max_attempts:
+                    raise
+                self._sleep(self._backoff(attempt))
+                continue
+            if response.status_code in self.retry_statuses and attempt < self.max_attempts:
+                self._sleep(self._backoff(attempt))
+                continue
+            return response
 
     def fetch_landing(self) -> httpx.Response:
-        raise NotImplementedError
+        response = self._get(self.config.landing_url)
+        if response.status_code in (404, 410):
+            raise LandingVanished(self.config.landing_url, response.status_code)
+        response.raise_for_status()
+        return response
 
+    # -------------------------------------------------------- discovery
     def discover(self, html: str, base_url: str) -> list[str]:
-        raise NotImplementedError
+        """Absolute document URLs linked from the landing page, filtered by
+        accepted extension. The filter is applied to RESULTS; nothing here
+        generates a URL."""
+        soup = BeautifulSoup(html, "html.parser")
+        found: list[str] = []
+        exts = tuple(e.lower() for e in self.config.accept_extensions)
+        for a in soup.find_all("a", href=True):
+            href = (a.get("href") or "").strip()
+            if not href or href.startswith("#") or href.lower().startswith(_SKIP_SCHEMES):
+                continue
+            absolute, _fragment = urldefrag(urljoin(base_url, href))
+            if not absolute.lower().startswith(("http://", "https://")):
+                continue
+            if exts and not urlparse(absolute).path.lower().endswith(exts):
+                continue
+            if absolute not in found:
+                found.append(absolute)
+        return found
+
+    # ------------------------------------------------------------- poll
+    @staticmethod
+    def _capture_id(now: datetime) -> str:
+        return now.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z").replace(":", "")
 
     def poll(self, *, now: datetime | None = None, capture_id: str | None = None) -> RunResult:
-        raise NotImplementedError
+        injected_clock = now is not None
+        now = now or datetime.now(timezone.utc)
+        cid = capture_id or self._capture_id(now)
+        sid = self.config.source_id
+        manifest: dict = {
+            "capture_id": cid,
+            "source_id": sid,
+            "publisher": self.config.publisher,
+            "started_at": now.isoformat(),
+            "landing_url": self.config.landing_url,
+            "polarity": self.config.polarity,
+            "chassis_version": __version__,
+        }
+
+        def finish(run: RunResult) -> RunResult:
+            finished = now if injected_clock else datetime.now(timezone.utc)
+            run.finished_at = finished
+            run.alerts = evaluate(run, self.config, last_change_at=self.store.last_change_at(sid, exclude_capture_id=cid), now=now)
+            manifest.update({
+                "finished_at": finished.isoformat(),
+                "landing_status": run.landing_status,
+                "landing_sha256": run.landing_sha256,
+                "robots_sha256": run.robots_sha256,
+                "urls": run.dispositions,
+                "counts": run.counts,
+                "failed": run.failed,
+                "alerts": [a.as_dict() for a in run.alerts],
+            })
+            self.store.write_manifest(sid, cid, manifest)
+            return run
+
+        try:
+            landing = self.fetch_landing()
+        except LandingVanished as e:
+            return finish(RunResult(cid, sid, now, None, self.config.landing_url, e.status, None, None, [], [], failed=True))
+
+        landing_sha = self.store.write_snapshot(sid, cid, "landing.html", landing.content)
+
+        robots_sha: str | None = None
+        try:
+            robots = self.client.get(urljoin(str(landing.url), "/robots.txt"))
+            if robots.status_code == 200:
+                robots_sha = self.store.write_snapshot(sid, cid, "robots.txt", robots.content)
+        except httpx.HTTPError:
+            robots_sha = None
+
+        dispositions: list[dict] = []
+        for i, url in enumerate(self.discover(landing.text, str(landing.url))):
+            if i:
+                self._sleep(self.inter_request_delay)
+            try:
+                response = self._get(url)
+            except httpx.TransportError as e:
+                dispositions.append({"url": url, "disposition": "failed", "sha256": None, "http_status": None, "bytes": 0, "error": str(e)})
+                continue
+            if response.status_code != 200:
+                dispositions.append({"url": url, "disposition": "failed", "sha256": None, "http_status": response.status_code, "bytes": len(response.content)})
+                continue
+            cap = self.store.save(sid, url, response.content, now,
+                                  http_status=response.status_code, headers=dict(response.headers),
+                                  discovered_on=str(landing.url), capture_id=cid)
+            dispositions.append({"url": url, "disposition": cap.disposition.value, "sha256": cap.sha256,
+                                 "http_status": response.status_code, "bytes": len(response.content)})
+
+        return finish(RunResult(cid, sid, now, None, self.config.landing_url, landing.status_code, landing_sha, robots_sha, dispositions, [], failed=False))

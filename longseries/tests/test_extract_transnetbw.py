@@ -51,6 +51,13 @@ def test_class_and_text_disagreement_is_flagged_not_resolved():
     assert dax["availability"] == "langfristig verfügbar" and dax["availability_shown"] == "mittelfristig verfügbar"
 
 
+def test_capitalisation_difference_is_not_a_mismatch():
+    """The live page has 'Mittelfristig verfügbar' for two entries; that is not a disagreement."""
+    html = HTML.replace("🟢 mittelfristig verfügbar", "🟢 Mittelfristig verfügbar")
+    rows = TransnetBWLandingParser().parse(html.encode(), REC)
+    assert not any(r.get("availability_mismatch") for r in rows)
+
+
 def test_fails_loudly_without_edition_or_blocks():
     with pytest.raises(ParseError, match="Stand"):
         TransnetBWLandingParser().parse(HTML.replace("Stand 05/2026", "").encode(), REC)

@@ -57,7 +57,7 @@ class TransnetBWLandingParser:
                 "state_class": color,
                 "qualifiers": [],
             }
-            if shown and color in _STATE_BY_CLASS and shown != _STATE_BY_CLASS[color]:
+            if shown and color in _STATE_BY_CLASS and shown.casefold() != _STATE_BY_CLASS[color].casefold():
                 row["availability_mismatch"] = True  # class and text disagree: flag it, never pick one silently
             for li in div.select("li"):
                 t = li.get_text(" ", strip=True).translate(_DASHES)

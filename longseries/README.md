@@ -84,6 +84,11 @@ $LONGSERIES_DATA/de-tso-amprion-netzanschluss/
 A changed file at the same URL keeps **both** versions — that pair is often the
 product. Never delete anything under `blobs/`. Back the whole directory up.
 
+For the landing page, "changed" means the **visible text** changed. Pages like
+50Hertz's carry a fresh CSRF token and viewstate on every fetch; those are not
+changes, and they do not mint a new blob. Each poll's raw HTML is still kept
+verbatim under `captures/<id>/landing.html`.
+
 ## Adding a series
 
 1. Copy `sources/amprion.yaml`, fill it in. `polarity` is mandatory and never
@@ -105,7 +110,7 @@ collector returns zero rows and reports success.
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[test]"
-pytest            # 88 tests; HTTP is faked with httpx.MockTransport, PDFs are generated in-test, nothing touches the network
+pytest            # 90 tests; HTTP is faked with httpx.MockTransport, PDFs are generated in-test, nothing touches the network
 ```
 
 Stories are in `docs/USER-STORIES.md`; every acceptance criterion names its
@@ -117,11 +122,12 @@ No CI. This is the record.
 
 | Check | Result |
 |---|---|
-| `pytest` | 88/88 |
+| `pytest` | 90/90 |
 | Host poll ×2 against live Amprion | 3 new → 3 unchanged, 3 blobs, exit 0 |
 | Container poll ×2 against live Amprion | same, from inside the image |
 | Container with `--network=none` | clean failed run, exit 2, `P1 LANDING_UNREACHABLE`, manifest written, no traceback |
 | Host poll ×2 against live TransnetBW | landing new → unchanged, exit 0 |
+| Host poll ×2 against live 50Hertz | landing new → unchanged (viewstate/CSRF tokens differ every fetch; visible text identical) |
 | `extract` on the captured Amprion blob | 10 rows, edition 2026-04, via pymupdf table detection |
 | `extract` on the captured TransnetBW landing | 48 rows, edition 2026-05: 36 nicht / 8 mittelfristig / 4 langfristig verfügbar, 12 with MW bands |
 | `docker build` | builds; behind a TLS-intercepting proxy use `--secret id=ca,src=…` |

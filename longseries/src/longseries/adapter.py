@@ -23,6 +23,18 @@ from .config import SourceConfig
 from .store import ContentAddressedStore, sha256_hex
 
 
+def canonical_text_sha256(html_bytes: bytes) -> str:
+    """Hash of what a reader would see: scripts, styles and tags removed, entities
+    unescaped, whitespace collapsed. CSRF tokens, viewstates and cache-busters
+    live in attributes and vanish here. Verified against 50Hertz, whose page
+    differs in __VIEWSTATE/__EVENTVALIDATION on every fetch."""
+    soup = BeautifulSoup(html_bytes.decode("utf-8", errors="replace"), "html.parser")
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+    text = " ".join(soup.get_text(" ").split())
+    return sha256_hex(text.encode("utf-8"))
+
+
 class LandingVanished(Exception):
     """The landing page itself returned 404/410. P0: the section moved or the source is gone."""
 
@@ -187,7 +199,8 @@ class BaseAdapter:
         # prose qualifiers drift independently of the files. Track it like a document.
         landing_cap = self.store.save(sid, self.config.landing_url, landing.content, now,
                                       http_status=landing.status_code, headers=dict(landing.headers),
-                                      discovered_on=self.config.landing_url, capture_id=cid, role="landing")
+                                      discovered_on=self.config.landing_url, capture_id=cid, role="landing",
+                                      content_sha256=canonical_text_sha256(landing.content))
         dispositions: list[dict] = [{"url": self.config.landing_url, "role": "landing",
                                      "disposition": landing_cap.disposition.value, "sha256": landing_cap.sha256,
                                      "http_status": landing.status_code, "bytes": len(landing.content)}]

@@ -179,6 +179,35 @@ def test_landing_page_is_tracked_as_a_payload(config, store, site, landing_html,
     assert run.counts["changed"] == 1 and run.counts["unchanged"] == 2
 
 
+def test_landing_token_only_change_is_unchanged_and_mints_no_blob(config, store, site, landing_html, now):
+    """50Hertz: __VIEWSTATE / __EVENTVALIDATION / __RequestVerificationToken differ on
+    every fetch; the visible text does not. That is not a change. Raw bytes of each
+    poll still land in captures/<id>/landing.html; no new blob is written."""
+    html1 = landing_html.replace("<body>", '<body><input type="hidden" name="__RequestVerificationToken" value="AAA"/>')
+    html2 = landing_html.replace("<body>", '<body><input type="hidden" name="__RequestVerificationToken" value="BBB"/>')
+    _happy_site(site, config, html1)
+    a = _mk(site, config, store)
+    a.poll(now=now, capture_id="c1")
+    blobs_before = len(list((store.source_dir(config.source_id) / "blobs").rglob("*")))
+    site.set(config.landing_url, 200, html2.encode())
+    run = a.poll(now=now, capture_id="c2")
+    landing = next(d for d in run.dispositions if d.get("role") == "landing")
+    assert landing["disposition"] == "unchanged"
+    assert len(list((store.source_dir(config.source_id) / "blobs").rglob("*"))) == blobs_before
+    assert (store.capture_dir(config.source_id, "c2") / "landing.html").read_bytes() == html2.encode(), "raw of this poll preserved"
+    vs = store.versions(config.source_id, config.landing_url)
+    assert vs[0]["content_sha256"] == vs[1]["content_sha256"] and vs[1]["disposition"] == "unchanged"
+
+
+def test_landing_visible_text_change_is_changed(config, store, site, landing_html, now):
+    _happy_site(site, config, landing_html)
+    a = _mk(site, config, store)
+    a.poll(now=now, capture_id="c1")
+    site.set(config.landing_url, 200, landing_html.replace("unverbindlich", "verbindlich").encode())
+    run = a.poll(now=now, capture_id="c2")
+    assert next(d for d in run.dispositions if d.get("role") == "landing")["disposition"] == "changed"
+
+
 def test_landing_only_source_captures_nothing_but_the_landing_page(config, store, site, landing_html, now):
     config.accept_extensions = []
     _happy_site(site, config, landing_html)

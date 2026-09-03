@@ -52,6 +52,8 @@ Acceptance:
 - `test_run_snapshots_robots_txt_every_poll`
 - `test_run_manifest_records_landing_sha_and_robots_sha`
 - `test_landing_page_is_tracked_as_a_payload`
+- `test_landing_token_only_change_is_unchanged_and_mints_no_blob` (50Hertz: viewstate/CSRF differ every fetch)
+- `test_landing_visible_text_change_is_changed`
 - `test_landing_only_source_captures_nothing_but_the_landing_page`
 - `test_source_config_accepts_empty_extensions_meaning_landing_only`
 

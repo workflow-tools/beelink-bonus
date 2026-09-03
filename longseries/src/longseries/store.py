@@ -71,17 +71,27 @@ class ContentAddressedStore:
 
     def save(self, source_id: str, source_url: str, content: bytes, captured_at: datetime, *,
              http_status: int, headers: dict, discovered_on: str, capture_id: str,
-             role: str = "document") -> Capture:
+             role: str = "document", content_sha256: str | None = None) -> Capture:
+        """content_sha256, when given, is the hash of a CANONICAL form of the payload
+        (for landing pages: the visible text). Disposition is decided on it, so a
+        page whose only change is a CSRF token or a viewstate is UNCHANGED. The raw
+        bytes are never altered; when they differ but the content does not, no new
+        blob is minted — the per-capture landing.html snapshot keeps that day's raw."""
         sha = sha256_hex(content)
+        key = content_sha256 or sha
         previous = self.versions(source_id, source_url)
         if not previous:
             disposition = Disposition.NEW
-        elif previous[-1]["sha256"] == sha:
+        elif (previous[-1].get("content_sha256") or previous[-1]["sha256"]) == key:
             disposition = Disposition.UNCHANGED
         else:
             disposition = Disposition.CHANGED
 
-        bytes_written = self._write_blob_if_absent(self.blob_path(source_id, sha), content)
+        if disposition == Disposition.UNCHANGED and content_sha256 and previous[-1]["sha256"] != sha:
+            sha = previous[-1]["sha256"]  # point at the blob we already hold; raw of this poll lives in captures/
+            bytes_written = 0
+        else:
+            bytes_written = self._write_blob_if_absent(self.blob_path(source_id, sha), content)
 
         record = {
             "capture_id": capture_id,
@@ -95,6 +105,7 @@ class ContentAddressedStore:
             "bytes": len(content),
             "disposition": disposition.value,
             "role": role,  # "landing" or "document"; parsers select on it
+            "content_sha256": content_sha256 or sha,
         }
         self._append_index(source_id, record)
         return Capture(disposition=disposition, sha256=sha, bytes_written=bytes_written, record=record)

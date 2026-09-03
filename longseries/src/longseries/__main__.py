@@ -81,7 +81,7 @@ def cmd_schedule(args) -> int:
 def cmd_extract(args) -> int:
     from .extract.run import extract_source
     config = _load(args.source)
-    counts = extract_source(ContentAddressedStore(Path(args.data)), config.source_id, replay=args.replay)
+    counts = extract_source(ContentAddressedStore(Path(args.data)), config, replay=args.replay)
     print(json.dumps(counts, indent=2))
     return 3 if counts["failed"] else 0
 

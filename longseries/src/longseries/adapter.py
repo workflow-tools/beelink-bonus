@@ -187,7 +187,7 @@ class BaseAdapter:
         # prose qualifiers drift independently of the files. Track it like a document.
         landing_cap = self.store.save(sid, self.config.landing_url, landing.content, now,
                                       http_status=landing.status_code, headers=dict(landing.headers),
-                                      discovered_on=self.config.landing_url, capture_id=cid)
+                                      discovered_on=self.config.landing_url, capture_id=cid, role="landing")
         dispositions: list[dict] = [{"url": self.config.landing_url, "role": "landing",
                                      "disposition": landing_cap.disposition.value, "sha256": landing_cap.sha256,
                                      "http_status": landing.status_code, "bytes": len(landing.content)}]

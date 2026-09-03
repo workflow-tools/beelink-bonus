@@ -14,7 +14,9 @@ line-layout state machine (get_text() yields one cell per line, 5 or 6 lines a
 row, the sixth being an optional remark)."""
 from __future__ import annotations
 
+import contextlib
 import re
+import sys
 
 from .base import ParseError, edition_from_text
 
@@ -52,7 +54,10 @@ class AmprionSupplementaryParser:
 
     def _via_tables(self, page) -> list[dict]:
         try:
-            tabs = page.find_tables()
+            # pymupdf prints a "consider pymupdf_layout" advisory to STDOUT, which would
+            # corrupt the CLI's JSON output; keep the library's chatter on stderr.
+            with contextlib.redirect_stdout(sys.stderr):
+                tabs = page.find_tables()
         except Exception:
             return []
         for t in getattr(tabs, "tables", []):

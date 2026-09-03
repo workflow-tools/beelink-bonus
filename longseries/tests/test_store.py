@@ -81,6 +81,16 @@ def test_store_record_carries_url_headers_status_timestamp_and_discovered_on(sto
     assert r["capture_id"] == "c9"
     assert r["bytes"] == 3
     assert r["disposition"] == "new"
+    assert r["role"] == "document"
+
+
+def test_store_record_role_is_persisted_in_the_index(store, now):
+    """Parsers select on role from the INDEX record. An earlier build put role only
+    in the manifest; the synthetic test fixture injected it by hand and hid the
+    gap, and the live TransnetBW extract returned zero rows."""
+    store.save("test-tso", "https://example.test/landing", b"<html>", now, http_status=200, headers={},
+               discovered_on="https://example.test/landing", capture_id="c1", role="landing")
+    assert store.versions("test-tso", "https://example.test/landing")[0]["role"] == "landing"
 
 
 def test_store_versions_lists_every_capture_of_a_url_in_order(store, now):

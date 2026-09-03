@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from ..config import SourceConfig
 from ..store import ContentAddressedStore
 from .base import ParseError, stamp
 from .registry import select
@@ -14,11 +15,14 @@ def silver_dir(store: ContentAddressedStore, source_id: str, parser) -> Path:
     return store.source_dir(source_id) / "silver" / f"{parser.parser_id}-v{parser.version}"
 
 
-def extract_source(store: ContentAddressedStore, source_id: str, *, replay: bool = False) -> dict:
+def extract_source(store: ContentAddressedStore, config: SourceConfig, *, replay: bool = False) -> dict:
+    source_id = config.source_id
     counts = {"parsed": 0, "skipped": 0, "no_parser": 0, "failed": 0, "rows": 0}
     for record in store._iter_index(source_id):
         if record["disposition"] not in ("new", "changed"):
             continue
+        if "role" not in record:  # records written before role was stored: derive it, never guess
+            record["role"] = "landing" if record["source_url"] == config.landing_url else "document"
         parser = select(record)
         if parser is None:
             counts["no_parser"] += 1

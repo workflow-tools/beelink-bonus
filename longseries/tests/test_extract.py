@@ -13,7 +13,11 @@ from longseries.extract.amprion import AmprionSupplementaryParser
 from longseries.extract.base import ParseError, edition_from_text
 from longseries.extract.run import extract_source, load_silver
 from longseries.extract.series import build_series, render_markdown
+from longseries.config import SourceConfig
 from longseries.store import ContentAddressedStore
+
+AMPRION = SourceConfig(source_id="de-tso-amprion-netzanschluss", publisher="Amprion", landing_url="https://www.amprion.net/landing",
+                       declared_cadence=None, polarity="lists_state", contact="x")
 
 LINES = ["Schaltanlage", "Spannungs-", "ebene", "Stadt/Gemeinde", "Anschlussauslegung*",
          "Voraussichtlich frühestes ", "Inbetriebnahmejahr**", "Anmerkungen",
@@ -33,13 +37,9 @@ def make_pdf(lines=LINES) -> bytes:
     return doc.tobytes()
 
 
-def _rec(store, content, url, sha_suffix="", role=None, captured="2026-09-03T06:00:00+00:00", cid="c1"):
-    r = store.save("de-tso-amprion-netzanschluss", url, content, datetime.fromisoformat(captured),
-                   http_status=200, headers={}, discovered_on="x", capture_id=cid)
-    rec = r.record
-    if role:
-        rec["role"] = role
-    return rec
+def _rec(store, content, url, role="document", captured="2026-09-03T06:00:00+00:00", cid="c1"):
+    return store.save("de-tso-amprion-netzanschluss", url, content, datetime.fromisoformat(captured),
+                      http_status=200, headers={}, discovered_on="x", capture_id=cid, role=role).record
 
 
 # ---------------------------------------------------------------- edition
@@ -91,8 +91,9 @@ def test_extract_writes_silver_rows_with_provenance(tmp_path):
     pdf = make_pdf()
     _rec(store, pdf, "https://www.amprion.net/.../Ergaenzendes-Dokument-04.2026.pdf")
     _rec(store, b"%PDF map", "https://www.amprion.net/.../Karte-04.2026.pdf")
-    counts = extract_source(store, "de-tso-amprion-netzanschluss")
-    assert counts == {"parsed": 1, "skipped": 0, "no_parser": 1, "failed": 0, "rows": 3}
+    _rec(store, b"<html>Stand 04.2026</html>", "https://www.amprion.net/landing", role="landing")
+    counts = extract_source(store, AMPRION)
+    assert counts == {"parsed": 1, "skipped": 0, "no_parser": 2, "failed": 0, "rows": 3}, "map pdf and landing have no parser"
     rows = load_silver(store, "de-tso-amprion-netzanschluss")
     assert len(rows) == 3
     r = rows[0]
@@ -103,18 +104,40 @@ def test_extract_writes_silver_rows_with_provenance(tmp_path):
 def test_extract_is_idempotent_and_replay_reparses(tmp_path):
     store = ContentAddressedStore(tmp_path)
     _rec(store, make_pdf(), "https://x/Ergaenzendes-Dokument-04.2026.pdf")
-    assert extract_source(store, "de-tso-amprion-netzanschluss")["parsed"] == 1
-    assert extract_source(store, "de-tso-amprion-netzanschluss")["skipped"] == 1
-    assert extract_source(store, "de-tso-amprion-netzanschluss", replay=True)["parsed"] == 1
+    assert extract_source(store, AMPRION)["parsed"] == 1
+    assert extract_source(store, AMPRION)["skipped"] == 1
+    assert extract_source(store, AMPRION, replay=True)["parsed"] == 1
 
 
 def test_extract_failure_is_a_file_not_a_crash(tmp_path):
     store = ContentAddressedStore(tmp_path)
     rec = _rec(store, b"%PDF-1.4 not really", "https://x/Ergaenzendes-Dokument-04.2026.pdf")
-    counts = extract_source(store, "de-tso-amprion-netzanschluss")
+    counts = extract_source(store, AMPRION)
     assert counts["failed"] == 1 and counts["parsed"] == 0
     errs = list((tmp_path / "de-tso-amprion-netzanschluss" / "silver").glob("*/*.error.json"))
     assert len(errs) == 1 and json.loads(errs[0].read_text())["sha256"] == rec["sha256"]
+
+
+def test_extract_derives_role_for_legacy_index_records(tmp_path):
+    """Index records written before role was stored get it derived from the config's
+    landing_url at read time — never guessed from content."""
+    store = ContentAddressedStore(tmp_path)
+    rec = _rec(store, b"<html>Stand 04.2026</html>", "https://www.amprion.net/landing")
+    # simulate a legacy record: strip the role from the index line
+    idx = store.index_path("de-tso-amprion-netzanschluss")
+    lines = [json.loads(l) for l in idx.read_text().splitlines()]
+    for l in lines:
+        l.pop("role", None)
+    idx.write_text("".join(json.dumps(l) + "\n" for l in lines))
+    seen = []
+    import longseries.extract.run as run_mod
+    orig = run_mod.select
+    run_mod.select = lambda r: (seen.append(r.get("role")), orig(r))[1]
+    try:
+        extract_source(store, AMPRION)
+    finally:
+        run_mod.select = orig
+    assert seen == ["landing"]
 
 
 # ------------------------------------------------------------------ series

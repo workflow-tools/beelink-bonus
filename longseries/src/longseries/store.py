@@ -70,7 +70,8 @@ class ContentAddressedStore:
         return len(content)
 
     def save(self, source_id: str, source_url: str, content: bytes, captured_at: datetime, *,
-             http_status: int, headers: dict, discovered_on: str, capture_id: str) -> Capture:
+             http_status: int, headers: dict, discovered_on: str, capture_id: str,
+             role: str = "document") -> Capture:
         sha = sha256_hex(content)
         previous = self.versions(source_id, source_url)
         if not previous:
@@ -93,6 +94,7 @@ class ContentAddressedStore:
             "discovered_on": discovered_on,
             "bytes": len(content),
             "disposition": disposition.value,
+            "role": role,  # "landing" or "document"; parsers select on it
         }
         self._append_index(source_id, record)
         return Capture(disposition=disposition, sha256=sha, bytes_written=bytes_written, record=record)

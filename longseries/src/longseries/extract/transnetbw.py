@@ -43,7 +43,7 @@ class TransnetBWLandingParser:
         rows = []
         for div in soup.select("div.tooltip"):
             color = next((c.rsplit("--", 1)[-1] for c in div.get("class", []) if c.startswith("tooltip-uw-type--")), None)
-            h3 = div.find("h3")
+            h3 = div.find(["h2", "h3", "h4", "h5"])
             if not color or not h3:
                 continue
             name = h3.get_text(" ", strip=True)

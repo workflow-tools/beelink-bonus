@@ -21,12 +21,14 @@ x-collector: &collector
       required: false
   environment:
     - LONGSERIES_CONTACT
-    - LONGSERIES_HEARTBEAT_URL
 
 services:
   amprion:
     <<: *collector
     container_name: longseries-amprion
+    environment:
+      - LONGSERIES_CONTACT
+      - LONGSERIES_HEARTBEAT_URL=${LONGSERIES_HEARTBEAT_URL_AMPRION:-}   # one healthchecks check per source: a dead source must not hide behind a live sibling
     command: ["schedule", "/sources/amprion.yaml", "--data", "/data", "--every", "P1D"]
     volumes:
       - ./sources:/sources:ro
@@ -35,6 +37,9 @@ services:
   transnetbw:
     <<: *collector
     container_name: longseries-transnetbw
+    environment:
+      - LONGSERIES_CONTACT
+      - LONGSERIES_HEARTBEAT_URL=${LONGSERIES_HEARTBEAT_URL_TRANSNETBW:-}   # one healthchecks check per source: a dead source must not hide behind a live sibling
     command: ["schedule", "/sources/transnetbw.yaml", "--data", "/data", "--every", "P1D"]
     volumes:
       - ./sources:/sources:ro
@@ -43,6 +48,9 @@ services:
   fiftyhertz:
     <<: *collector
     container_name: longseries-50hertz
+    environment:
+      - LONGSERIES_CONTACT
+      - LONGSERIES_HEARTBEAT_URL=${LONGSERIES_HEARTBEAT_URL_50HERTZ:-}   # one healthchecks check per source: a dead source must not hide behind a live sibling
     command: ["schedule", "/sources/50hertz.yaml", "--data", "/data", "--every", "P1D"]
     volumes:
       - ./sources:/sources:ro

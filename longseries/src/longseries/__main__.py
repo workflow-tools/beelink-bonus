@@ -12,6 +12,7 @@ Alerts go to stderr so a scheduler's log shows them without parsing JSON."""
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 import json
 import os
 import sys
@@ -64,11 +65,33 @@ def cmd_poll(args) -> int:
     return 3 if run.alerts else 0
 
 
+def seconds_until_due(store: ContentAddressedStore, source_id: str, every_seconds: float, now: datetime) -> float:
+    """How long to wait before the first poll after a (re)start. A container in a
+    restart loop must not hammer the publisher: if the latest capture is younger
+    than the interval, wait out the remainder."""
+    d = store.source_dir(source_id) / "captures"
+    if not d.exists():
+        return 0.0
+    names = sorted(p.name for p in d.iterdir() if p.is_dir())
+    if not names:
+        return 0.0
+    try:
+        last = datetime.strptime(names[-1], "%Y-%m-%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return 0.0
+    return max(0.0, every_seconds - (now - last).total_seconds())
+
+
 def cmd_schedule(args) -> int:
-    """Poll now, then every --every (default P1D). Polling more often than the
+    """Poll on a fixed interval (default P1D). Polling more often than the
     declared cadence is cheap — the store writes zero bytes for unchanged files —
     and it bounds how late a change is noticed. Runs until stopped."""
     every = parse_cadence(args.every).total_seconds()
+    config = _load(args.source)
+    wait = seconds_until_due(ContentAddressedStore(Path(args.data)), config.source_id, every, datetime.now(timezone.utc))
+    if wait > 0:
+        print(f"[schedule] last capture is recent; first poll in {int(wait)}s", file=sys.stderr)
+        time.sleep(wait)
     while True:
         try:
             rc = cmd_poll(args)

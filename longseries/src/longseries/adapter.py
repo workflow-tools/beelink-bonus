@@ -23,6 +23,14 @@ from .config import SourceConfig
 from .store import ContentAddressedStore, sha256_hex
 
 
+def visible_text(html_bytes: bytes) -> str:
+    """What a reader sees: scripts, styles and tags removed, whitespace collapsed."""
+    soup = BeautifulSoup(html_bytes.decode("utf-8", errors="replace"), "html.parser")
+    for t in soup(["script", "style", "noscript"]):
+        t.decompose()
+    return " ".join(soup.get_text(" ").split())
+
+
 def canonical_text_sha256(html_bytes: bytes) -> str:
     """Hash of what a reader would see: scripts, styles and tags removed, entities
     unescaped, whitespace collapsed. CSRF tokens, viewstates and cache-busters
@@ -58,6 +66,7 @@ class RunResult:
     alerts: list[Alert]
     failed: bool
     error: str | None = None
+    landing_expectation_met: bool | None = None  # None = no expectation configured
 
     @property
     def counts(self) -> dict:
@@ -177,6 +186,7 @@ class BaseAdapter:
                 "counts": run.counts,
                 "failed": run.failed,
                 "error": run.error,
+                "landing_expectation_met": run.landing_expectation_met,
                 "alerts": [a.as_dict() for a in run.alerts],
             })
             self.store.write_manifest(sid, cid, manifest)
@@ -230,4 +240,7 @@ class BaseAdapter:
             dispositions.append({"url": url, "disposition": cap.disposition.value, "sha256": cap.sha256,
                                  "http_status": response.status_code, "bytes": len(response.content)})
 
-        return finish(RunResult(cid, sid, now, None, self.config.landing_url, landing.status_code, landing_sha, robots_sha, dispositions, [], failed=False))
+        expect = self.config.expect_landing_text
+        met = None if not expect else (expect.casefold() in visible_text(landing.content).casefold())
+        return finish(RunResult(cid, sid, now, None, self.config.landing_url, landing.status_code, landing_sha, robots_sha, dispositions, [], failed=False,
+                                landing_expectation_met=met))

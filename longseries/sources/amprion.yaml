@@ -33,3 +33,7 @@ accept_extensions: [".pdf"]
 min_payload_bytes: 50000
 licence: none-analysed
 licence_evidence_url: https://www.amprion.net/Strommarkt/Netzkunden/Netzanschluss/Darstellung-der-potenziellen-Netzanschlussmoeglichkeiten-und-der-Kundenprojekte.html
+
+# Structural expectations — a 200 with the wrong page behind it raises STRUCTURE_MISSING the same day.
+expect_min_documents: 3
+expect_landing_text: "Schaltfeld"

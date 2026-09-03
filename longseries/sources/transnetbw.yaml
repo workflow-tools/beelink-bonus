@@ -20,3 +20,6 @@ accept_extensions: []          # landing-only: the page text is the series
 min_payload_bytes: 50000
 licence: none-analysed
 licence_evidence_url: https://www.transnetbw.de/de/transparenz/netzzugang-und-entgelt/netzanschlusskarte
+
+# Structural expectations — a 200 with the wrong page behind it raises STRUCTURE_MISSING the same day.
+expect_landing_text: "Umspannwerk"

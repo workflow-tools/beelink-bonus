@@ -75,8 +75,7 @@ class ContentAddressedStore:
         """content_sha256, when given, is the hash of a CANONICAL form of the payload
         (for landing pages: the visible text). Disposition is decided on it, so a
         page whose only change is a CSRF token or a viewstate is UNCHANGED. The raw
-        bytes are never altered; when they differ but the content does not, no new
-        blob is minted — the per-capture landing.html snapshot keeps that day's raw."""
+        bytes are never altered and always kept, keyed by their own hash."""
         sha = sha256_hex(content)
         key = content_sha256 or sha
         previous = self.versions(source_id, source_url)
@@ -87,11 +86,13 @@ class ContentAddressedStore:
         else:
             disposition = Disposition.CHANGED
 
-        if disposition == Disposition.UNCHANGED and content_sha256 and previous[-1]["sha256"] != sha:
-            sha = previous[-1]["sha256"]  # point at the blob we already hold; raw of this poll lives in captures/
-            bytes_written = 0
-        else:
-            bytes_written = self._write_blob_if_absent(self.blob_path(source_id, sha), content)
+        # The row's sha256 is always the hash of the bytes THIS poll received, and those
+        # bytes are always kept: a row must describe the blob it points at. An earlier
+        # version aliased the row to the previous blob when only volatile tokens
+        # differed; that saved ~0.1 GB/year per volatile source and broke the one
+        # invariant everything above relies on. Dedup by raw hash still writes
+        # nothing for a byte-identical fetch.
+        bytes_written = self._write_blob_if_absent(self.blob_path(source_id, sha), content)
 
         record = {
             "capture_id": capture_id,

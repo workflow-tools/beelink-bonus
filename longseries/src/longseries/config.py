@@ -44,6 +44,10 @@ class SourceConfig:
     heartbeat_url: str | None = None
     declared_cadence_evidence: str | None = None
     stale_tolerance: float = 1.5
+    # Structural expectations: a landing page that returns 200 with nothing behind it is
+    # otherwise silent until the declared cadence elapses (180 days on P6M).
+    expect_min_documents: int | None = None   # documents (non-landing, non-failed) a poll must find
+    expect_landing_text: str | None = None    # a phrase the landing page's visible text must contain
 
 
 def parse_cadence(text: str) -> timedelta:
@@ -93,4 +97,6 @@ def load_source_config(path: str | Path) -> SourceConfig:
         heartbeat_url=raw.get("heartbeat_url"),
         declared_cadence_evidence=raw.get("declared_cadence_evidence"),
         stale_tolerance=float(raw.get("stale_tolerance", 1.5)),
+        expect_min_documents=(int(raw["expect_min_documents"]) if raw.get("expect_min_documents") is not None else None),
+        expect_landing_text=(str(raw["expect_landing_text"]) if raw.get("expect_landing_text") else None),
     )

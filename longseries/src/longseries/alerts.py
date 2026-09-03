@@ -46,6 +46,23 @@ def evaluate(run: "RunResult", config: SourceConfig, *, last_change_at: datetime
                                 f"{config.source_id}: {d['url']} is {d.get('bytes')} bytes "
                                 f"(< {config.min_payload_bytes}); an error page served with a 200?"))
 
+    if not run.failed:
+        docs = [d for d in run.dispositions if d.get("role") != "landing"]
+        ok_docs = [d for d in docs if d.get("disposition") != "failed"]
+        if config.accept_extensions and not docs:
+            alerts.append(Alert("P1", "DISCOVERY_EMPTY",
+                                f"{config.source_id}: landing page returned {run.landing_status} but no link matched "
+                                f"{config.accept_extensions}. A redesign or a moved section looks exactly like this, and "
+                                f"without this alert it would stay silent until the declared cadence elapsed."))
+        if config.expect_min_documents is not None and len(ok_docs) < config.expect_min_documents:
+            alerts.append(Alert("P1", "STRUCTURE_MISSING",
+                                f"{config.source_id}: expected at least {config.expect_min_documents} documents, "
+                                f"found {len(ok_docs)}."))
+        if run.landing_expectation_met is False:
+            alerts.append(Alert("P1", "STRUCTURE_MISSING",
+                                f"{config.source_id}: landing page no longer contains the expected text "
+                                f"{config.expect_landing_text!r}; the page structure probably changed."))
+
     if last_change_at is not None and not run.failed:
         age = now - last_change_at
         cadence = config.declared_cadence

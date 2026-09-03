@@ -25,3 +25,6 @@ accept_extensions: []          # landing-only until the map data route is known;
 min_payload_bytes: 50000
 licence: none-analysed
 licence_evidence_url: https://www.50hertz.com/de/Vertragspartner/Netzkunden/Netzanschluss
+
+# Structural expectations — a 200 with the wrong page behind it raises STRUCTURE_MISSING the same day.
+expect_landing_text: "Schaltfeld"

@@ -12,8 +12,8 @@
 source_id: de-tso-transnetbw-netzanschlusskarte
 publisher: TransnetBW GmbH
 landing_url: https://www.transnetbw.de/de/transparenz/netzzugang-und-entgelt/netzanschlusskarte
-declared_cadence: quarterly
-declared_cadence_evidence: "[LOW] 'Die Karte wird zyklisch aktualisiert' (no period stated); page 'Stand 05/2026', assessment 'zum 01. April 2026'"
+declared_cadence: P6M
+declared_cadence_evidence: "[MED] Joint 4-TSO Reifegradverfahren documentation (netztransparenz.de, 2026-02-05, V1.00, Stand Q3 2025), section 4.3: capacity data is published at the START of each Phase 1: 'zu Beginn der Phase 1, also drei Monate vor dem Stichtag fuer die Einreichung der Antraege, werden unter anderem Daten zu verfuegbaren Netzanschlusskapazitaeten veroeffentlicht'; Phase 1 lasts three months ('Fuer die Phase ist eine Dauer von drei Monaten vorgesehen'), the offer phase 'etwas ueber zwei Monate', Phase 2 length is shown only in a figure; the procedure 'wiederholt sich zyklisch'. First Phase 1 began 2026-04-01. Cycle length is therefore at least ~5 months; P6M is the working value until a second edition is observed."
 polarity: lists_state
 contact: "https://github.com/workflow-tools/beelink-bonus"
 accept_extensions: []          # landing-only: the page text is the series

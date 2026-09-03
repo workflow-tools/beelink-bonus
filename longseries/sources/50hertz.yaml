@@ -1,0 +1,27 @@
+# 50Hertz Transmission GmbH — Netzanschluss page (landing-only, for now).
+#
+# Characterised 2026-09-03 by fetching the page [HIGH]. The capacity map is an "interaktive Karte"
+# rendered client-side; on 2026-09-03 the static page shows "Karte nicht konfiguriert" and an
+# unrendered template link ("{#MAP_LINK#}"), the English page has no map link, and the map JS
+# (FrequentDigitalMap.js / ApiClient.js) exposes no derivable data route. cs.50hertz.com/api guesses 404.
+# NEEDS BROWSER: open the page, DevTools > Network, find the request the map makes; then add that
+# URL as a second source. Until then this source captures the page prose, which carries the
+# disclaimer and its date:
+#   "…zum 31.03.2026 bestmöglichen Einschätzung und Kenntnislage von 50Hertz. Sie stellen eine
+#    unverbindliche Darstellung der Anschlussperspektive dar. Alle Angaben sind nur informatorisch
+#    und unterliegen fortlaufend Veränderungen."
+# Polarity note (verbatim): "…an welchen Standorten nach derzeitiger Einschätzung kein Netzanschluss
+#   möglich ist, da kein Schaltfeld verfügbar ist. Sie erfahren außerdem, wo ein Netzanschluss möglich
+#   wäre, sofern ein Schaltfeld errichtet werden kann." — lists where NOT possible, plus conditional
+#   possibilities: a different polarity from Amprion and TransnetBW. Never merge without normalising.
+source_id: de-tso-50hertz-netzanschluss
+publisher: 50Hertz Transmission GmbH
+landing_url: https://www.50hertz.com/de/Vertragspartner/Netzkunden/Netzanschluss
+declared_cadence: P6M
+declared_cadence_evidence: "[MED] Joint 4-TSO Reifegradverfahren documentation (netztransparenz.de, 2026-02-05, V1.00, Stand Q3 2025), section 4.3: capacity data is published at the START of each Phase 1: 'zu Beginn der Phase 1, also drei Monate vor dem Stichtag fuer die Einreichung der Antraege, werden unter anderem Daten zu verfuegbaren Netzanschlusskapazitaeten veroeffentlicht'; Phase 1 lasts three months ('Fuer die Phase ist eine Dauer von drei Monaten vorgesehen'), the offer phase 'etwas ueber zwei Monate', Phase 2 length is shown only in a figure; the procedure 'wiederholt sich zyklisch'. First Phase 1 began 2026-04-01. Cycle length is therefore at least ~5 months; P6M is the working value until a second edition is observed."
+polarity: lists_where_not_possible
+contact: "https://github.com/workflow-tools/beelink-bonus"
+accept_extensions: []          # landing-only until the map data route is known; the 23 linked PDFs are forms and terms
+min_payload_bytes: 50000
+licence: none-analysed
+licence_evidence_url: https://www.50hertz.com/de/Vertragspartner/Netzkunden/Netzanschluss

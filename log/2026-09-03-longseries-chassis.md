@@ -50,9 +50,36 @@ codes directly and asserts the image contains the new code before running.
 - Cadence: page says "zyklisches Reifegradverfahren", no period. `quarterly`
   is a `[LOW]` placeholder.
 
+## Later the same day — extraction tier, sources 2–3, and what the sites actually do
+
+- **Extraction needs no vision model.** Amprion's map PDF has no substation
+  labels in its text layer (unlabeled vector dots); the substation table is
+  in the supplementary PDF and pymupdf extracts it cleanly (10 rows, "Stand
+  April 2026"). TransnetBW's Netzanschlusskarte is structured HTML tooltips:
+  48 substations, three-valued availability (36 nicht / 8 mittelfristig / 4
+  langfristig verfügbar), 12 with MW bands and n-0/n-1. Both parsers are
+  pure, versioned, replayable; silver keeps publisher vocabulary.
+- **Cadence is now evidence-based.** The joint 4-TSO Reifegradverfahren
+  documentation (netztransparenz.de, 2026-02-05) says capacity data is
+  published at the start of each three-month Phase 1 and the procedure
+  repeats cyclically; offer phase ≈ 2 months. Working value P6M.
+- **50Hertz:** map module unconfigured on the live page ("Karte nicht
+  konfiguriert", `{#MAP_LINK#}`); no data route derivable without a
+  browser. Landing-only source added to capture the prose and its date.
+  Polarity differs: 50Hertz lists where connection is *not* possible.
+- **TenneT:** every path returns a Cloudflare-style challenge to curl and to
+  WebFetch alike; robots.txt names AI crawlers (a machine-readable
+  reservation — station 4 and 5 material). No source configured. Owner to
+  check from a browser: https://www.tennet.eu/de/strommarkt/kunden-deutschland/netzanschlussanfragen
+- **Corrections:** two commit messages claimed verification that had not
+  happened (7846a11: image build; 1957242: 47 TransnetBW rows, actually 0
+  because `role` was not persisted to the index). Both corrected in
+  follow-up commits; the gate now asserts the numbers a message claims.
+
 ## Open
 
 - Architecture panel + facts verification workflows still running at time of
   writing; results to be folded in (extraction tier, host provisioner docs).
-- Other three TSOs (50Hertz, TenneT DE, TransnetBW) as sources 2–4.
-- Extraction tier (Epic 2) — not started; see `longseries/docs/USER-STORIES.md`.
+- TenneT as source 4 (blocked from here — browser check); 50Hertz map data route (browser check).
+- Gold layer: one availability vocabulary across two-valued (Amprion), three-valued (TransnetBW) and inverted-polarity (50Hertz) publishers; MW bands to numbers; entity crosswalk.
+- Per-source expectation tests on silver row counts (a 48→3 drop should alert).

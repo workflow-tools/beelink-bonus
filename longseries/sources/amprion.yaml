@@ -20,11 +20,9 @@ source_id: de-tso-amprion-netzanschluss
 publisher: Amprion GmbH
 landing_url: https://www.amprion.net/Strommarkt/Netzkunden/Netzanschluss/Darstellung-der-potenziellen-Netzanschlussmoeglichkeiten-und-der-Kundenprojekte.html
 
-# The page says the assessment happens "im Rahmen des zyklischen Reifegradverfahrens" but states no period.
-# Quarterly is an ASSUMPTION [LOW] chosen so the staleness alarm is not silent; replace with the observed
-# cadence after two editions have been captured, or with a verbatim quote if Amprion states one.
-declared_cadence: quarterly
-declared_cadence_evidence: "[LOW] 'zyklischen Reifegradverfahrens' (no period stated); files dated 04.2026, Last-Modified 2026-06-04; Reifegradverfahren started 2026-04-01 per the section index"
+# Cadence: once per Reifegradverfahren cycle, published at the start of each Phase 1 (see evidence).
+declared_cadence: P6M
+declared_cadence_evidence: "[MED] Joint 4-TSO Reifegradverfahren documentation (netztransparenz.de, 2026-02-05, V1.00, Stand Q3 2025), section 4.3: capacity data is published at the START of each Phase 1: 'zu Beginn der Phase 1, also drei Monate vor dem Stichtag fuer die Einreichung der Antraege, werden unter anderem Daten zu verfuegbaren Netzanschlusskapazitaeten veroeffentlicht'; Phase 1 lasts three months ('Fuer die Phase ist eine Dauer von drei Monaten vorgesehen'), the offer phase 'etwas ueber zwei Monate', Phase 2 length is shown only in a figure; the procedure 'wiederholt sich zyklisch'. First Phase 1 began 2026-04-01. Cycle length is therefore at least ~5 months; P6M is the working value until a second edition is observed."
 
 # Both states are listed explicitly (green AND red), so this is a state map, not a one-sided list.
 polarity: lists_state

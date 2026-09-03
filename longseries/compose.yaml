@@ -7,6 +7,10 @@
 #
 # Secrets/personal data stay out of the repo: put LONGSERIES_CONTACT and
 # LONGSERIES_HEARTBEAT_URL in a .env file next to this compose.yaml (gitignored).
+#
+# All services mount the SAME data root. The store namespaces by source_id itself
+# ({root}/{source_id}/blobs|index.jsonl|captures), so the host tree matches the
+# README and one rsync of $LONGSERIES_DATA moves every series.
 
 x-collector: &collector
   build: .
@@ -26,7 +30,7 @@ services:
     command: ["schedule", "/sources/amprion.yaml", "--data", "/data", "--every", "P1D"]
     volumes:
       - ./sources:/sources:ro
-      - ${LONGSERIES_DATA:-./data}/de-tso-amprion-netzanschluss:/data
+      - ${LONGSERIES_DATA:-./data}:/data
 
   transnetbw:
     <<: *collector
@@ -34,7 +38,7 @@ services:
     command: ["schedule", "/sources/transnetbw.yaml", "--data", "/data", "--every", "P1D"]
     volumes:
       - ./sources:/sources:ro
-      - ${LONGSERIES_DATA:-./data}/de-tso-transnetbw-netzanschlusskarte:/data
+      - ${LONGSERIES_DATA:-./data}:/data
 
   fiftyhertz:
     <<: *collector
@@ -42,4 +46,4 @@ services:
     command: ["schedule", "/sources/50hertz.yaml", "--data", "/data", "--every", "P1D"]
     volumes:
       - ./sources:/sources:ro
-      - ${LONGSERIES_DATA:-./data}/de-tso-50hertz-netzanschluss:/data
+      - ${LONGSERIES_DATA:-./data}:/data

@@ -29,6 +29,12 @@ wherever extraction runs.
 
 ## Install (Beelink, VPS, anything with Docker)
 
+The Beelink is dual-boot: Windows 11 day to day, Ubuntu 24.04 for GPU work
+(per this repo's runbooks). Collection runs under either — Docker Desktop on
+Windows or Docker Engine on Ubuntu — because it needs no GPU. Extraction that
+calls Ollama should run on the Ubuntu boot, where Ollama is a host systemd
+service (see `docs/OLLAMA-NIGHTWORK-DASHBOARDS.md`).
+
 ```bash
 git clone https://github.com/workflow-tools/beelink-bonus
 cd beelink-bonus/longseries

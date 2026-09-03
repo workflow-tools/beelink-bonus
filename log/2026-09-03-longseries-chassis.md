@@ -71,6 +71,14 @@ codes directly and asserts the image contains the new code before running.
   WebFetch alike; robots.txt names AI crawlers (a machine-readable
   reservation — station 4 and 5 material). No source configured. Owner to
   check from a browser: https://www.tennet.eu/de/strommarkt/kunden-deutschland/netzanschlussanfragen
+- **Readers' findings acted on:** compose mounted `$LONGSERIES_DATA/<source_id>:/data`
+  while the store already namespaces by source_id — the id nested twice on
+  the host; all services now mount the shared root. Beelink is dual-boot
+  (Windows 11 daily / Ubuntu for GPU). Ollama is a host systemd service;
+  containers reach it via `host.docker.internal` (`extra_hosts: host-gateway`
+  on Linux). llama.cpp-in-container has no precedent in either repo. regwatch
+  has never run (no tests, unused `resend` dep) — its notify.py is reference
+  shape only.
 - **Corrections:** two commit messages claimed verification that had not
   happened (7846a11: image build; 1957242: 47 TransnetBW rows, actually 0
   because `role` was not persisted to the index). Both corrected in

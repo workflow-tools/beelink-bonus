@@ -1,8 +1,11 @@
 """CLI: the thing a container or a cron job actually runs.
 
     python -m longseries poll     sources/x.yaml --data /data
+    python -m longseries schedule sources/x.yaml --data /data --every P1D
     python -m longseries show     sources/x.yaml --data /data
     python -m longseries validate sources/x.yaml
+    python -m longseries extract  sources/x.yaml --data /data [--replay]     # bronze -> silver (needs .[extract])
+    python -m longseries series   sources/x.yaml --data /data [--json]       # silver -> transitions
 
 Exit codes: 0 clean · 2 run failed (a P0 fired) · 3 run completed with P1 alerts.
 Alerts go to stderr so a scheduler's log shows them without parsing JSON."""
@@ -75,6 +78,27 @@ def cmd_schedule(args) -> int:
         time.sleep(every)
 
 
+def cmd_extract(args) -> int:
+    from .extract.run import extract_source
+    config = _load(args.source)
+    counts = extract_source(ContentAddressedStore(Path(args.data)), config.source_id, replay=args.replay)
+    print(json.dumps(counts, indent=2))
+    return 3 if counts["failed"] else 0
+
+
+def cmd_series(args) -> int:
+    from .extract.run import load_silver
+    from .extract.series import build_series, render_markdown
+    config = _load(args.source)
+    rows = load_silver(ContentAddressedStore(Path(args.data)), config.source_id)
+    series = build_series(rows)
+    if args.json:
+        print(json.dumps({k: v for k, v in series.items() if k != "history"}, ensure_ascii=False, indent=2))
+    else:
+        print(render_markdown(series, config.source_id))
+    return 0
+
+
 def cmd_show(args) -> int:
     config = _load(args.source)
     store = ContentAddressedStore(Path(args.data))
@@ -92,13 +116,18 @@ def cmd_show(args) -> int:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="longseries")
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name, fn in (("poll", cmd_poll), ("schedule", cmd_schedule), ("show", cmd_show), ("validate", cmd_validate)):
+    for name, fn in (("poll", cmd_poll), ("schedule", cmd_schedule), ("show", cmd_show), ("validate", cmd_validate),
+                     ("extract", cmd_extract), ("series", cmd_series)):
         sp = sub.add_parser(name)
         sp.add_argument("source")
         if name != "validate":
             sp.add_argument("--data", required=True)
         if name == "schedule":
             sp.add_argument("--every", default="P1D", help="poll interval, ISO-8601 duration or daily/weekly (default P1D)")
+        if name == "extract":
+            sp.add_argument("--replay", action="store_true", help="re-parse blobs that already have silver output")
+        if name == "series":
+            sp.add_argument("--json", action="store_true")
         sp.set_defaults(fn=fn)
     args = p.parse_args(argv)
     return args.fn(args)

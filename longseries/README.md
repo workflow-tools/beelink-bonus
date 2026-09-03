@@ -105,7 +105,7 @@ collector returns zero rows and reports success.
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[test]"
-pytest            # 64 tests; HTTP is faked with httpx.MockTransport, nothing touches the network
+pytest            # 85 tests; HTTP is faked with httpx.MockTransport, PDFs are generated in-test, nothing touches the network
 ```
 
 Stories are in `docs/USER-STORIES.md`; every acceptance criterion names its
@@ -117,16 +117,44 @@ No CI. This is the record.
 
 | Check | Result |
 |---|---|
-| `pytest` | 64/64 |
+| `pytest` | 85/85 |
 | Host poll ×2 against live Amprion | 3 new → 3 unchanged, 3 blobs, exit 0 |
 | Container poll ×2 against live Amprion | same, from inside the image |
 | Container with `--network=none` | clean failed run, exit 2, `P1 LANDING_UNREACHABLE`, manifest written, no traceback |
+| Host poll ×2 against live TransnetBW | landing new → unchanged, exit 0 |
+| `extract` on the captured Amprion blob | 10 rows, edition 2026-04, via pymupdf table detection |
+| `extract` on the captured TransnetBW landing | 47 rows, edition 2026-05, three availability values |
 | `docker build` | builds; behind a TLS-intercepting proxy use `--secret id=ca,src=…` |
+
+## Extraction (Epic 2) — bronze → silver → series
+
+Runs wherever the bronze store is (the Beelink, or the same VPS). Needs the
+`extract` extra (pymupdf):
+
+```bash
+pip install -e ".[extract]"                 # or: docker build --build-arg EXTRAS='[extract]' -t longseries:extract .
+python -m longseries extract sources/amprion.yaml    --data $LONGSERIES_DATA   # bronze -> silver, idempotent
+python -m longseries extract sources/transnetbw.yaml --data $LONGSERIES_DATA
+python -m longseries series  sources/amprion.yaml    --data $LONGSERIES_DATA   # transitions, appeared/disappeared, restatements
+```
+
+Parsers are pure functions of stored bytes, versioned, re-runnable with
+`--replay`. Every silver row carries provenance back to the blob and the
+parser version. Two clocks on every row: `edition` (the publisher's "Stand")
+and `observed_at` (our capture). A failed parse writes `<sha>.error.json`.
+
+| Source | Payload | Parser | What a row holds |
+|---|---|---|---|
+| Amprion | supplementary PDF (text table) | `amprion-supplementary` | substation, kV, municipality, n-0/n-1, earliest year, remarks; listed = available |
+| TransnetBW | landing page HTML | `transnetbw-netzanschlusskarte` | substation, nicht/mittelfristig/langfristig verfügbar, kV, earliest year, design, feed-in/load MW bands, qualifiers |
+
+No language model is involved yet. The map PDFs turned out to be unlabeled
+vector dots — substation names live in the supplementary table, not on the
+map — so the Beelink's job is cross-publisher normalisation (three-valued vs
+two-valued availability, MW bands, differing "Stand" clocks), not vision.
 
 ## Not built yet
 
-The extraction tier (Epic 2): replayable parsers over `blobs/`, entity
-crosswalk, polarity normalisation, a bitemporal fact table, and the Ollama
-structured-output call for the map PDF. See `docs/USER-STORIES.md` → "Out of
-scope for Epic 1". Collection is running; extraction can wait — the bytes
-cannot.
+Gold-layer normalisation across publishers; 50Hertz (JS-rendered map, source
+not yet located) and TenneT (browser challenge + robots.txt naming AI
+crawlers — check from a browser before deciding). See `docs/USER-STORIES.md`.

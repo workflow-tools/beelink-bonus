@@ -190,10 +190,61 @@ Acceptance:
 
 ---
 
-## Out of scope for Epic 1 (tracked for Epic 2: Extraction)
+# Epic 2: Extraction (bronze → silver → series)
 
-- Replayable parsers over stored bytes (silver layer)
-- Entity crosswalk, polarity normalisation, unit/timezone traps (gold layer)
-- Bitemporal fact table with `observed_at` immutable
-- Per-source expectation tests and parse-failure-rate alerts
-- Ollama structured-output extraction via the host service
+Evidence-based, from the captured documents: Amprion's supplementary PDF is
+a clean text table; TransnetBW's landing page is structured HTML. Neither
+needs a vision model. The Beelink's job here is normalising four publishers'
+vocabularies, not reading maps.
+
+## US-20 Parsers are replayable, versioned, pure
+
+As the archive engine,
+I want every parser to be a pure function of (stored bytes, capture record),
+versioned, run offline, and re-runnable with `--replay`,
+so that a parser wrong for three months is repaired by replaying history.
+
+Acceptance: `test_extract_writes_silver_rows_with_provenance`,
+`test_extract_is_idempotent_and_replay_reparses`
+
+## US-21 Provenance on every row
+
+Every silver row carries `source_id, capture_id, observed_at, sha256,
+source_url, parser_id, parser_version` and must have `entity` and `edition`.
+
+Acceptance: `test_extract_writes_silver_rows_with_provenance`
+
+## US-22 A failed parse is a file, not a log line
+
+Acceptance: `test_extract_failure_is_a_file_not_a_crash`,
+`test_amprion_parser_fails_loudly_without_an_edition`,
+`test_amprion_parser_fails_loudly_on_unexpected_row_shape`,
+`test_fails_loudly_without_edition_or_blocks`
+
+## US-23 Publisher vocabulary preserved in silver
+
+Amprion: two states (listed = available). TransnetBW: three (nicht /
+mittelfristig / langfristig verfügbar). Silver keeps each publisher's own
+words and units; a class-vs-text disagreement is flagged, never resolved.
+
+Acceptance: `test_amprion_parser_extracts_rows_with_optional_remarks`,
+`test_parses_state_from_class_and_details_from_list_items`,
+`test_class_and_text_disagreement_is_flagged_not_resolved`
+
+## US-24 The series: two clocks, transitions, restatements
+
+`edition` (what the publisher says the world was, from when) and
+`observed_at` (when we captured it). The product is the differences between
+consecutive editions, entities appearing/disappearing, and restatements —
+one edition observed twice with different content (Amprion's `_v2`).
+
+Acceptance: `test_series_detects_transitions_appearance_disappearance_and_restatement`
+
+## Still out of scope
+
+- Cross-publisher normalisation (gold): one availability vocabulary, MW
+  bands to numbers, entity crosswalk across TSOs
+- 50Hertz (JS-rendered map; source not yet located) and TenneT (blocked
+  behind a browser challenge; robots.txt names AI crawlers)
+- Map PDFs (unlabeled vector dots; would need geo-matching, not a VLM)
+- Per-source expectation tests on silver row counts

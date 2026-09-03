@@ -172,6 +172,7 @@ All Claude session notes go in `./log/` with filename format: `YYYY-MM-DD-topic.
 - [ ] Which Mittelstand verticals in the region are most accessible? (Legal? Medical? Manufacturing?)
 - [ ] Can the Beelink run 24/7 reliably as a headless server? Thermal/power testing needed.
 - [ ] What's the electricity cost at current German rates for 24/7 operation? (~65W TDP, ~€0.30/kWh ≈ €14/month)
+- [ ] **longseries browser checks** (see `longseries/docs/SOURCES.md` §Owner browser checks): does TenneT's Netzanschlussanfragen page load in a browser and publish a capacity list? What request does 50Hertz's interactive map make? Run `archive-probe.mjs probe` against the three TSO landing URLs from a machine that can reach web.archive.org.
 
 ---
 

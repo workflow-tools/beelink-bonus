@@ -74,9 +74,11 @@ def load_source_config(path: str | Path) -> SourceConfig:
         raise ConfigError(f"{p}: missing required field(s): {', '.join(missing)}")
     if raw["polarity"] not in POLARITIES:
         raise ConfigError(f"{p}: polarity must be one of {POLARITIES}, got {raw['polarity']!r}")
-    exts = raw.get("accept_extensions") or [".pdf"]
+    exts = raw.get("accept_extensions")
+    if exts is None:
+        exts = [".pdf"]
     if not isinstance(exts, list) or not all(isinstance(e, str) and e.startswith(".") for e in exts):
-        raise ConfigError(f"{p}: accept_extensions must be a list of '.ext' strings")
+        raise ConfigError(f"{p}: accept_extensions must be a list of '.ext' strings (an empty list means landing-page-only)")
     return SourceConfig(
         source_id=str(raw["source_id"]),
         publisher=str(raw["publisher"]),

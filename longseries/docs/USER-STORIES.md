@@ -41,10 +41,19 @@ Why: a capacity figure that quietly gains the word *vorläufig* has changed
 meaning without changing value. And the only legal question that will ever
 be asked is "what did the terms say the day you collected?"
 
+The landing page is also a **tracked payload** with versions, not only a
+snapshot: TransnetBW publishes its per-substation availability list as page
+text (🔴 nicht verfügbar / 🟢 mittelfristig verfügbar / langfristig
+verfügbar, "Stand 05/2026") with no document to download. A source with an
+empty `accept_extensions` is landing-only.
+
 Acceptance:
 - `test_run_snapshots_landing_html_every_poll_even_when_unchanged`
 - `test_run_snapshots_robots_txt_every_poll`
 - `test_run_manifest_records_landing_sha_and_robots_sha`
+- `test_landing_page_is_tracked_as_a_payload`
+- `test_landing_only_source_captures_nothing_but_the_landing_page`
+- `test_source_config_accepts_empty_extensions_meaning_landing_only`
 
 ## US-03 Run manifest per poll
 

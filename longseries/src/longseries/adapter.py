@@ -114,9 +114,11 @@ class BaseAdapter:
         """Absolute document URLs linked from the landing page, filtered by
         accepted extension. The filter is applied to RESULTS; nothing here
         generates a URL."""
+        exts = tuple(e.lower() for e in self.config.accept_extensions)
+        if not exts:
+            return []  # landing-only source: the page text is the payload, nothing is linked worth keeping
         soup = BeautifulSoup(html, "html.parser")
         found: list[str] = []
-        exts = tuple(e.lower() for e in self.config.accept_extensions)
         for a in soup.find_all("a", href=True):
             href = (a.get("href") or "").strip()
             if not href or href.startswith("#") or href.lower().startswith(_SKIP_SCHEMES):
@@ -124,7 +126,7 @@ class BaseAdapter:
             absolute, _fragment = urldefrag(urljoin(base_url, href))
             if not absolute.lower().startswith(("http://", "https://")):
                 continue
-            if exts and not urlparse(absolute).path.lower().endswith(exts):
+            if not urlparse(absolute).path.lower().endswith(exts):
                 continue
             if absolute not in found:
                 found.append(absolute)
@@ -180,6 +182,15 @@ class BaseAdapter:
                                     error=f"{type(e).__name__}: {e}"))
 
         landing_sha = self.store.write_snapshot(sid, cid, "landing.html", landing.content)
+        # The landing page is itself a payload, not just metadata: TransnetBW publishes
+        # its per-substation availability list as page text, and every publisher's
+        # prose qualifiers drift independently of the files. Track it like a document.
+        landing_cap = self.store.save(sid, self.config.landing_url, landing.content, now,
+                                      http_status=landing.status_code, headers=dict(landing.headers),
+                                      discovered_on=self.config.landing_url, capture_id=cid)
+        dispositions: list[dict] = [{"url": self.config.landing_url, "role": "landing",
+                                     "disposition": landing_cap.disposition.value, "sha256": landing_cap.sha256,
+                                     "http_status": landing.status_code, "bytes": len(landing.content)}]
 
         robots_sha: str | None = None
         try:
@@ -189,7 +200,6 @@ class BaseAdapter:
         except httpx.HTTPError:
             robots_sha = None
 
-        dispositions: list[dict] = []
         for i, url in enumerate(self.discover(landing.text, str(landing.url))):
             if i:
                 self._sleep(self.inter_request_delay)

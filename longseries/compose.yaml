@@ -27,3 +27,11 @@ services:
     volumes:
       - ./sources:/sources:ro
       - ${LONGSERIES_DATA:-./data}/de-tso-amprion-netzanschluss:/data
+
+  transnetbw:
+    <<: *collector
+    container_name: longseries-transnetbw
+    command: ["schedule", "/sources/transnetbw.yaml", "--data", "/data", "--every", "P1D"]
+    volumes:
+      - ./sources:/sources:ro
+      - ${LONGSERIES_DATA:-./data}/de-tso-transnetbw-netzanschlusskarte:/data

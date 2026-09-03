@@ -71,6 +71,12 @@ def test_source_config_parses_declared_cadence_to_timedelta(text, expected):
     assert parse_cadence(text) == expected
 
 
+def test_source_config_accepts_empty_extensions_meaning_landing_only(tmp_path):
+    p = tmp_path / "s.yaml"
+    p.write_text(YAML_OK.replace('accept_extensions: [".pdf", ".xlsx"]', "accept_extensions: []"))
+    assert load_source_config(p).accept_extensions == []
+
+
 def test_parse_cadence_rejects_garbage():
     with pytest.raises(ConfigError):
         parse_cadence("whenever")

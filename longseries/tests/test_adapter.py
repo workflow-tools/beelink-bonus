@@ -155,11 +155,37 @@ def test_poll_first_run_captures_every_discovered_document(config, store, site, 
     _happy_site(site, config, landing_html)
     run = _mk(site, config, store).poll(now=now, capture_id="c1")
     assert run.failed is False
-    disp = {d["url"]: d["disposition"] for d in run.dispositions}
-    assert disp == {
+    docs = {d["url"]: d["disposition"] for d in run.dispositions if d.get("role") != "landing"}
+    assert docs == {
         "https://example.test/files/Netzanschluss_Kapazitaeten_2026-08.pdf": "new",
         "https://example.test/netz/anschluss/files/07_Anschluss_v2.xlsx": "new",
     }
+    landing = [d for d in run.dispositions if d.get("role") == "landing"]
+    assert len(landing) == 1 and landing[0]["url"] == config.landing_url and landing[0]["disposition"] == "new"
+
+
+def test_landing_page_is_tracked_as_a_payload(config, store, site, landing_html, now):
+    """TransnetBW publishes its substation list as page text. The landing page is
+    a payload with versions, not just a snapshot."""
+    _happy_site(site, config, landing_html)
+    a = _mk(site, config, store)
+    a.poll(now=now, capture_id="c1")
+    site.set(config.landing_url, 200, landing_html.replace("Stand: 01.08.2026", "Stand: 01.09.2026").encode())
+    run = a.poll(now=now, capture_id="c2")
+    landing = next(d for d in run.dispositions if d.get("role") == "landing")
+    assert landing["disposition"] == "changed"
+    vs = store.versions(config.source_id, config.landing_url)
+    assert len(vs) == 2 and vs[0]["sha256"] != vs[1]["sha256"]
+    assert run.counts["changed"] == 1 and run.counts["unchanged"] == 2
+
+
+def test_landing_only_source_captures_nothing_but_the_landing_page(config, store, site, landing_html, now):
+    config.accept_extensions = []
+    _happy_site(site, config, landing_html)
+    run = _mk(site, config, store).poll(now=now, capture_id="c1")
+    assert [d["role"] for d in run.dispositions if "role" in d] == ["landing"]
+    assert len(run.dispositions) == 1
+    assert not any(str(q.url).endswith((".pdf", ".xlsx")) for q in site.requests)
 
 
 def test_run_snapshots_landing_html_every_poll_even_when_unchanged(config, store, site, landing_html, now):
@@ -191,7 +217,7 @@ def test_run_manifest_lists_every_discovered_url_with_a_disposition(config, stor
     _happy_site(site, config, landing_html)
     _mk(site, config, store).poll(now=now, capture_id="c1")
     m = store.read_manifest(config.source_id, "c1")
-    urls = {u["url"] for u in m["urls"]}
+    urls = {u["url"] for u in m["urls"] if u.get("role") != "landing"}
     assert urls == {
         "https://example.test/files/Netzanschluss_Kapazitaeten_2026-08.pdf",
         "https://example.test/netz/anschluss/files/07_Anschluss_v2.xlsx",
@@ -207,7 +233,7 @@ def test_run_manifest_counts_match_dispositions(config, store, site, landing_htm
     a.poll(now=now, capture_id="c1")
     run2 = a.poll(now=now, capture_id="c2")
     m = store.read_manifest(config.source_id, "c2")
-    assert m["counts"] == {"new": 0, "unchanged": 2, "changed": 0, "failed": 0}
+    assert m["counts"] == {"new": 0, "unchanged": 3, "changed": 0, "failed": 0}, "2 documents + the landing page"
     assert run2.counts == m["counts"]
 
 
@@ -217,7 +243,7 @@ def test_second_poll_with_one_changed_file_keeps_both_versions(config, store, si
     a.poll(now=now, capture_id="c1")
     site.set("https://example.test/files/Netzanschluss_Kapazitaeten_2026-08.pdf", 200, b"%PDF-1.4 " + b"z" * 2000)
     run = a.poll(now=now, capture_id="c2")
-    assert run.counts == {"new": 0, "unchanged": 1, "changed": 1, "failed": 0}
+    assert run.counts == {"new": 0, "unchanged": 2, "changed": 1, "failed": 0}, "landing + xlsx unchanged, pdf changed"
     vs = store.versions(config.source_id, "https://example.test/files/Netzanschluss_Kapazitaeten_2026-08.pdf")
     assert len(vs) == 2 and vs[0]["sha256"] != vs[1]["sha256"]
 

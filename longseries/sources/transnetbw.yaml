@@ -1,0 +1,22 @@
+# TransnetBW GmbH — "Netzanschlusskarte": per-substation (Umspannwerk) connection availability.
+#
+# Characterised 2026-09-03 by fetching the page [HIGH]. THE PAYLOAD IS THE PAGE TEXT — there is no
+# document to download (the only linked PDF is the general terms, AEB). The page lists each
+# Umspannwerk with a three-valued state rendered as text + emoji:
+#   "🔴 nicht verfügbar" · "🟢 mittelfristig verfügbar" · "langfristig verfügbar"
+# (three values, vs Amprion's two — the normalisation moat in one line).
+# Disclaimer (verbatim): "…basieren auf der zum 01. April 2026 bestmöglichen Einschätzung und Kenntnislage.
+#   Sie stellen eine unverbindliche Darstellung der Anschlussperspektive dar. Aus der Veröffentlichung der
+#   Netzkarte kann kein Anspruch auf einen Netzanschluss abgeleitet werden."
+# Cadence (verbatim): "Die Karte wird zyklisch aktualisiert."  Page shows "Stand 05/2026".
+source_id: de-tso-transnetbw-netzanschlusskarte
+publisher: TransnetBW GmbH
+landing_url: https://www.transnetbw.de/de/transparenz/netzzugang-und-entgelt/netzanschlusskarte
+declared_cadence: quarterly
+declared_cadence_evidence: "[LOW] 'Die Karte wird zyklisch aktualisiert' (no period stated); page 'Stand 05/2026', assessment 'zum 01. April 2026'"
+polarity: lists_state
+contact: "https://github.com/workflow-tools/beelink-bonus"
+accept_extensions: []          # landing-only: the page text is the series
+min_payload_bytes: 50000
+licence: none-analysed
+licence_evidence_url: https://www.transnetbw.de/de/transparenz/netzzugang-und-entgelt/netzanschlusskarte

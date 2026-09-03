@@ -188,6 +188,7 @@ All Claude session notes go in `./log/` with filename format: `YYYY-MM-DD-topic.
 | `GRANT-APPLICATION-PLAN.md` | **Bavarian grant plan** — Digitalbonus Plus + Start?Zuschuss! eligibility, application steps, pitch framing |
 | `docs/OLLAMA-NIGHTWORK-DASHBOARDS.md` | **Nightwork strategy** — Ollama defaults audit, `ollama launch` agents, overnight batch dashboards (schools/real-estate/arXiv) on the RegWatch skeleton |
 | `regwatch/` | Self-hosted LLM-triaged web change detection (changedetection.io + Ollama) — the Nightwork skeleton |
+| `longseries/` | **Long-series capture chassis** — polls a public page on a cadence, stores every linked document content-addressed and never overwritten; first series Amprion Schaltfeld. Docker/compose, runs anywhere (collection must survive relocation); extraction tier TBD on the Beelink. See `longseries/README.md`, `longseries/docs/USER-STORIES.md`, `log/2026-09-03-longseries-chassis.md` |
 | `log/` | Session notes |
 | `../vilseckki-datafactory-app/CLAUDE.md` | **Data Factory** — Claude context (spun out repo) |
 | `../vilseckki-datafactory-app/LECHAT-PROJECT-DESCRIPTION.md` | Data Factory — Mistral/Le Chat briefing |

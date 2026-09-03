@@ -76,9 +76,11 @@ def test_alert_landing_vanished_is_p0(config, now):
 class _Pinger:
     def __init__(self):
         self.urls: list[str] = []
+        self.bodies: list[str] = []
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.urls.append(str(request.url))
+        self.bodies.append(request.content.decode("utf-8") if request.content else "")
         return httpx.Response(200, request=request)
 
 
@@ -111,6 +113,41 @@ def test_heartbeat_pings_fail_url_when_run_raises():
     else:
         raise AssertionError("the original exception must propagate after the fail ping")
     assert p.urls == ["https://hc.test/ping/abc/fail"]
+
+
+def test_heartbeat_pings_fail_with_alert_text_on_p1():
+    """P1 alerts must reach a human. The watchdog's /fail carries the text, so
+    healthchecks.io is the whole alert router — no email code to maintain."""
+    p = _Pinger()
+    hb = Heartbeat("https://hc.test/ping/abc", transport=httpx.MockTransport(p.handler))
+    r = _run([_d("u", "unchanged")])
+    r.alerts = [Alert("P1", "STALE", "content unchanged for 60 days")]
+    run_with_heartbeat(lambda: r, hb)
+    assert p.urls == ["https://hc.test/ping/abc/fail"]
+    assert "P1 STALE: content unchanged for 60 days" in p.bodies[0]
+
+
+def test_heartbeat_success_when_only_p2_alerts():
+    p = _Pinger()
+    hb = Heartbeat("https://hc.test/ping/abc", transport=httpx.MockTransport(p.handler))
+    r = _run([_d("u", "new")])
+    r.alerts = [Alert("P2", "NOTE", "informational")]
+    run_with_heartbeat(lambda: r, hb)
+    assert p.urls == ["https://hc.test/ping/abc"]
+
+
+def test_heartbeat_crash_ping_carries_the_exception():
+    p = _Pinger()
+    hb = Heartbeat("https://hc.test/ping/abc", transport=httpx.MockTransport(p.handler))
+
+    def boom():
+        raise RuntimeError("disk full")
+
+    try:
+        run_with_heartbeat(boom, hb)
+    except RuntimeError:
+        pass
+    assert p.urls == ["https://hc.test/ping/abc/fail"] and "disk full" in p.bodies[0]
 
 
 def test_heartbeat_failure_itself_does_not_mask_the_run_result():

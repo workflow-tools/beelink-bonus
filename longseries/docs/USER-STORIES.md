@@ -156,9 +156,15 @@ Why: a collector that dies quietly produces no alerts at all, which looks
 exactly like a collector that is working. The watchdog raising on a missing
 ping is the dead-man's-switch; we just have to ping.
 
+The fail ping carries the alert text as its body, so the watchdog's own
+email/push is the entire alert path. One external service, two jobs.
+
 Acceptance:
 - `test_heartbeat_pings_success_url_after_successful_run`
 - `test_heartbeat_pings_fail_url_when_run_raises`
+- `test_heartbeat_pings_fail_with_alert_text_on_p1`
+- `test_heartbeat_success_when_only_p2_alerts`
+- `test_heartbeat_crash_ping_carries_the_exception`
 - `test_heartbeat_failure_itself_does_not_mask_the_run_result`
 
 ## US-09 Sources are data, not code

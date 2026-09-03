@@ -80,3 +80,13 @@ def test_source_config_accepts_empty_extensions_meaning_landing_only(tmp_path):
 def test_parse_cadence_rejects_garbage():
     with pytest.raises(ConfigError):
         parse_cadence("whenever")
+
+
+def test_source_config_parses_structural_expectations(tmp_path):
+    p = tmp_path / "s.yaml"
+    p.write_text(YAML_OK + "expect_min_documents: 3\nexpect_landing_text: Schaltfeld\n")
+    c = load_source_config(p)
+    assert c.expect_min_documents == 3 and c.expect_landing_text == "Schaltfeld"
+    p.write_text(YAML_OK)
+    c = load_source_config(p)
+    assert c.expect_min_documents is None and c.expect_landing_text is None

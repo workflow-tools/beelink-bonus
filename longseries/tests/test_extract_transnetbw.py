@@ -51,6 +51,13 @@ def test_class_and_text_disagreement_is_flagged_not_resolved():
     assert dax["availability"] == "langfristig verfügbar" and dax["availability_shown"] == "mittelfristig verfügbar"
 
 
+def test_block_with_h2_instead_of_h3_is_still_parsed():
+    """The live page has 52 tooltip blocks; four carry the name in <h2 class="h2">."""
+    html = HTML.replace('<h3 class="h3">Umspannwerk Altbach</h3>', '<h2 class="h2">Umspannwerk Altbach</h2>')
+    rows = TransnetBWLandingParser().parse(html.encode(), REC)
+    assert any(r["entity"] == "Altbach" for r in rows)
+
+
 def test_capitalisation_difference_is_not_a_mismatch():
     """The live page has 'Mittelfristig verfügbar' for two entries; that is not a disagreement."""
     html = HTML.replace("🟢 mittelfristig verfügbar", "🟢 Mittelfristig verfügbar")

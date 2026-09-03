@@ -14,7 +14,7 @@ about vocabulary and polarity; that disagreement is the normalisation moat.
 | Publisher | Landing page | Payload | Edition marker | Vocabulary | Polarity | Status |
 |---|---|---|---|---|---|---|
 | **Amprion** | `…/Netzanschluss/Darstellung-der-potenziellen-Netzanschlussmoeglichkeiten-und-der-Kundenprojekte.html` | 3 PDFs: map (unlabeled vector dots), **supplementary table** (10 substations, kV, municipality, n-0/n-1, earliest year, remarks), customer projects (`_v2`) | "Stand April 2026" inside the PDFs; "04.2026" / "2026.04_" in two filename conventions on one page | green *voraussichtlich realisierbar* / red *nicht gegeben*; supplementary lists green only | `lists_state` | **collecting + parsing** |
-| **TransnetBW** | `…/netzzugang-und-entgelt/netzanschlusskarte` | the page itself: 48 `div.tooltip` blocks | "Stand 05/2026" on page; assessment "zum 01. April 2026" | 🔴 *nicht* / 🟢 *mittelfristig* / 🟡 *langfristig verfügbar*; kV, earliest year, n-0/n-1, feed-in and load MW bands, free-text qualifiers | `lists_state` | **collecting + parsing** |
+| **TransnetBW** | `…/netzzugang-und-entgelt/netzanschlusskarte` | the page itself: 52 `div.tooltip` blocks (four carry the name in `<h2>`, not `<h3>`) | "Stand 05/2026" on page; assessment "zum 01. April 2026" | 🔴 *nicht* / 🟢 *mittelfristig* / 🟡 *langfristig verfügbar*; kV, earliest year, n-0/n-1, feed-in and load MW bands, free-text qualifiers | `lists_state` | **collecting + parsing** |
 | **50Hertz** | `…/Vertragspartner/Netzkunden/Netzanschluss` | page prose only so far; the map is client-rendered and on 2026-09-03 shows "Karte nicht konfiguriert" with an unrendered `{#MAP_LINK#}` | "zum 31.03.2026 bestmöglichen Einschätzung" | "an welchen Standorten … **kein** Netzanschluss möglich ist, da kein Schaltfeld verfügbar ist … wo ein Netzanschluss möglich wäre, sofern ein Schaltfeld errichtet werden kann" | `lists_where_not_possible` | **collecting prose; map needs browser** |
 | **TenneT DE** | `…/strommarkt/kunden-deutschland/netzanschlussanfragen` (from search) | unknown | unknown | unknown | unknown | **blocked: browser challenge to every non-browser client; robots.txt names AI crawlers** |
 
@@ -55,16 +55,27 @@ von drei Monaten"*; offer phase *"etwas über zwei Monate"*; the procedure
 
 1. **TenneT** — open
    https://www.tennet.eu/de/strommarkt/kunden-deutschland/netzanschlussanfragen
-   in a normal browser. Does it load? Does it publish a list/map of
+   in a normal browser. The verification lane found the map is an ArcGIS
+   Experience Builder app
+   (`https://experience.arcgis.com/experience/b5f2b335e4224d60bbaf1d3f33248a1e`)
+   whose item is 403 to anonymous REST; in DevTools → Network look for the
+   feature-service URL it queries. Does it load? Does it publish a list/map of
    substations with capacity? Is there a document? If it loads for a
    browser but not for `curl`, that is a publisher posture (station 5), not
    a routing problem, and the robots.txt reservation (station 4) needs a
    decision before a collector is pointed at it.
-2. **50Hertz map** — open
-   https://www.50hertz.com/de/Vertragspartner/Netzkunden/Netzanschluss,
-   click "Karte im neuen Tab öffnen" if it renders, and in DevTools →
-   Network find the request the map makes (JSON/GeoJSON/tiles). That URL
-   becomes a second 50Hertz source.
+2. **50Hertz map** — the verification lane found the app and its API
+   `[HIGH on discovery; the API host is unreachable from the agent network]`:
+   the map is an Angular/Leaflet app ("Digitale Netzbilder") served by
+   `https://www.50hertz.com/DesktopModules/Lotes/FrequentModules/API/DigitalMap/GetDnbMap?dnbMapId=netzkapazitaet/production-map`
+   (≈17 MB, GET only), whose data comes from
+   `https://api-digitale-netzbilder.50hertz.com/api/api/` — routes seen in
+   the bundle: `GridLoadMapVersion/map/type/gridcapacity`,
+   `GeoData/transformerStations`, `GeoShapes/All/MapVersion/{id}`. From a
+   browser: open the page, then in DevTools → Network capture the exact
+   request and response for `gridcapacity` and `transformerStations`. If the
+   response is JSON with substation status, that URL becomes a landing-only
+   50Hertz source with `accept_extensions: []`.
 3. **Archive probe** — from your machine, run the skill's
    `archive-probe.mjs probe` against the three landing URLs above; this
    container cannot reach web.archive.org. Any recoverable earlier editions

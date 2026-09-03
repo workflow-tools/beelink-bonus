@@ -71,6 +71,37 @@ def test_alert_landing_vanished_is_p0(config, now):
     assert any(a.code == "LANDING_VANISHED" and a.severity == "P0" for a in alerts)
 
 
+def test_alert_discovery_empty_when_landing_ok_but_no_links_matched(config, now):
+    run = _run([{"url": config.landing_url, "role": "landing", "disposition": "unchanged", "sha256": "a" * 64, "http_status": 200, "bytes": 90000}])
+    alerts = evaluate(run, config, last_change_at=now - timedelta(days=1), now=now)
+    assert any(a.code == "DISCOVERY_EMPTY" and a.severity == "P1" for a in alerts)
+
+
+def test_no_discovery_empty_for_landing_only_sources(config, now):
+    config.accept_extensions = []
+    run = _run([{"url": config.landing_url, "role": "landing", "disposition": "unchanged", "sha256": "a" * 64, "http_status": 200, "bytes": 90000}])
+    assert not any(a.code == "DISCOVERY_EMPTY" for a in evaluate(run, config, last_change_at=now, now=now))
+
+
+def test_alert_structure_missing_when_fewer_documents_than_expected(config, now):
+    config.expect_min_documents = 3
+    run = _run([_d("u1", "unchanged"), _d("u2", "failed", status=404)])
+    alerts = evaluate(run, config, last_change_at=now, now=now)
+    assert any(a.code == "STRUCTURE_MISSING" and "expected at least 3" in a.message for a in alerts)
+
+
+def test_alert_structure_missing_when_landing_text_expectation_fails(config, now):
+    config.expect_landing_text = "Schaltfeld"
+    run = _run([_d("u1", "unchanged")]); run.landing_expectation_met = False
+    assert any(a.code == "STRUCTURE_MISSING" and "Schaltfeld" in a.message for a in evaluate(run, config, last_change_at=now, now=now))
+
+
+def test_no_structure_alert_when_expectations_met(config, now):
+    config.expect_min_documents = 1; config.expect_landing_text = "x"
+    run = _run([_d("u1", "unchanged")]); run.landing_expectation_met = True
+    assert not any(a.code in ("STRUCTURE_MISSING", "DISCOVERY_EMPTY") for a in evaluate(run, config, last_change_at=now, now=now))
+
+
 # ---------------------------------------------------------------- heartbeat
 
 class _Pinger:

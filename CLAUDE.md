@@ -172,6 +172,7 @@ All Claude session notes go in `./log/` with filename format: `YYYY-MM-DD-topic.
 - [ ] Which Mittelstand verticals in the region are most accessible? (Legal? Medical? Manufacturing?)
 - [ ] Can the Beelink run 24/7 reliably as a headless server? Thermal/power testing needed.
 - [ ] What's the electricity cost at current German rates for 24/7 operation? (~65W TDP, ~€0.30/kWh ≈ €14/month)
+- [ ] **`HSA_OVERRIDE_GFX_VERSION=11.0.0` may be outdated** for the Ryzen AI Max+ 395 (gfx1151): Ollama's GPU docs now list gfx1151 as natively supported and ROCm 7.2.2+ ships native kernels; Ollama 0.30.x+ on this APU is reported to need `OLLAMA_VULKAN=1` + `OLLAMA_IGPU_ENABLE=1` instead. Verify on the box before editing the systemd block (`longseries/docs/ADR-001-architecture.md`, appendix).
 - [ ] **longseries browser checks** (see `longseries/docs/SOURCES.md` §Owner browser checks): does TenneT's Netzanschlussanfragen page load in a browser and publish a capacity list? What request does 50Hertz's interactive map make? Run `archive-probe.mjs probe` against the three TSO landing URLs from a machine that can reach web.archive.org.
 
 ---

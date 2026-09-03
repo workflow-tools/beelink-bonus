@@ -142,6 +142,17 @@ def test_landing_persistent_5xx_is_a_failed_run_with_p1(config, store, site):
     assert any(al.code == "LANDING_UNREACHABLE" and al.severity == "P1" for al in run.alerts)
 
 
+def test_poll_evaluates_landing_text_expectation(config, store, site, landing_html, now):
+    _happy_site(site, config, landing_html)
+    config.expect_landing_text = "Kapazitäten"
+    assert _mk(site, config, store).poll(now=now, capture_id="c1").landing_expectation_met is True
+    config.expect_landing_text = "Elefant"
+    run = _mk(site, config, store).poll(now=now, capture_id="c2")
+    assert run.landing_expectation_met is False
+    assert any(a.code == "STRUCTURE_MISSING" for a in run.alerts)
+    assert store.read_manifest(config.source_id, "c2")["landing_expectation_met"] is False
+
+
 # --------------------------------------------------------------- full poll
 
 def _happy_site(site, config, landing_html, pdf=b"%PDF-1.4 " + b"x" * 2000, xlsx=b"PK" + b"y" * 2000):
@@ -179,25 +190,24 @@ def test_landing_page_is_tracked_as_a_payload(config, store, site, landing_html,
     assert run.counts["changed"] == 1 and run.counts["unchanged"] == 2
 
 
-def test_landing_token_only_change_is_unchanged_and_mints_no_blob(config, store, site, landing_html, now):
-    """50Hertz: __VIEWSTATE / __EVENTVALIDATION / __RequestVerificationToken differ on
-    every fetch; the visible text does not. That is not a change. Raw bytes of each
-    poll still land in captures/<id>/landing.html; no new blob is written."""
-    html1 = landing_html.replace("<body>", '<body><input type="hidden" name="__RequestVerificationToken" value="AAA"/>')
-    html2 = landing_html.replace("<body>", '<body><input type="hidden" name="__RequestVerificationToken" value="BBB"/>')
-    _happy_site(site, config, html1)
+def test_landing_token_only_change_is_unchanged_and_both_raw_blobs_are_kept(config, store, site, landing_html, now):
+    """Disposition follows the visible text; the index row's sha256 is the hash of the
+    bytes THIS poll received, and those bytes are kept. An earlier version pointed the
+    row at the previous blob to save space, so the row no longer described the bytes
+    it named — the one invariant the whole store rests on."""
+    import hashlib
+    _happy_site(site, config, landing_html)
     a = _mk(site, config, store)
     a.poll(now=now, capture_id="c1")
-    blobs_before = len(list((store.source_dir(config.source_id) / "blobs").rglob("*")))
-    site.set(config.landing_url, 200, html2.encode())
+    tokenised = landing_html.replace("<h2>", '<input type="hidden" name="__VIEWSTATE" value="zzz"><h2>')
+    site.set(config.landing_url, 200, tokenised.encode(), {"content-type": "text/html"})
     run = a.poll(now=now, capture_id="c2")
     landing = next(d for d in run.dispositions if d.get("role") == "landing")
     assert landing["disposition"] == "unchanged"
-    assert len(list((store.source_dir(config.source_id) / "blobs").rglob("*"))) == blobs_before
-    assert (store.capture_dir(config.source_id, "c2") / "landing.html").read_bytes() == html2.encode(), "raw of this poll preserved"
-    vs = store.versions(config.source_id, config.landing_url)
-    assert vs[0]["content_sha256"] == vs[1]["content_sha256"] and vs[1]["disposition"] == "unchanged"
-
+    assert landing["sha256"] == hashlib.sha256(tokenised.encode()).hexdigest(), "row names the bytes it received"
+    v = store.versions(config.source_id, config.landing_url)
+    assert v[0]["sha256"] != v[1]["sha256"] and v[0]["content_sha256"] == v[1]["content_sha256"]
+    assert store.blob_path(config.source_id, v[1]["sha256"]).read_bytes() == tokenised.encode()
 
 def test_landing_visible_text_change_is_changed(config, store, site, landing_html, now):
     _happy_site(site, config, landing_html)

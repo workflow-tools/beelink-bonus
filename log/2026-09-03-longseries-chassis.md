@@ -79,7 +79,20 @@ codes directly and asserts the image contains the new code before running.
   on Linux). llama.cpp-in-container has no precedent in either repo. regwatch
   has never run (no tests, unused `resend` dep) — its notify.py is reference
   shape only.
-- **Corrections:** two commit messages claimed verification that had not
+- **Verification lanes (interrupted by a usage limit; all nine fact lanes and
+  five readers completed, refuters partly):** the Gemini notes' hardware
+  stack is wrong in five places (kernel floor, `amdgpu.gttsize` deprecated
+  in favour of `ttm.pages_limit`, ROCm 10.0 current, `HSA_OVERRIDE_GFX_VERSION`
+  outdated for gfx1151 — the repo's own CLAUDE.md carries it — iGPU is the
+  8060S not the 890M); the LiteLLM proxy advice is redundant and collides
+  with Ollama's port; Gemini's own test suite fails 1/7 and did not compile
+  as pasted. See `longseries/docs/ADR-001-architecture.md` appendix.
+- **Architecture panel:** one of seven agents completed (risk-first). It
+  found three real defects — a shared heartbeat masking a dead source, an
+  index row aliased to a previous blob, and a 200-with-no-links silent for
+  the whole cadence — fixed in 6cd5fdf. ADR-001 written from that design and
+  marked single-perspective.
+- **Corrections:** three commit messages claimed verification that had not
   happened (7846a11: image build; 1957242: 47 TransnetBW rows, actually 0
   because `role` was not persisted to the index). Both corrected in
   follow-up commits; the gate now asserts the numbers a message claims.

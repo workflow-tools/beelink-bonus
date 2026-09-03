@@ -1,0 +1,23 @@
+# Amprion GmbH — Netzanschluss capacity publications.
+# Landing page found by scanning amprion.net's root (the obvious /Netzanschluss/ paths 404).
+# Verified 2026-09-03: the page states "Diese Karte dient der unverbindlichen Orientierung"
+# — the promulgation tell: non-binding => no retention duty => no mandated archive.
+source_id: de-tso-amprion-netzanschluss
+publisher: Amprion GmbH
+landing_url: https://www.amprion.net/Strommarkt/Netzkunden/Netzanschluss/
+
+# PROVISIONAL until the publisher's own cadence statement is read and quoted here.
+declared_cadence: monthly
+declared_cadence_evidence: "PROVISIONAL — not yet read from the page; replace with a verbatim quote + URL"
+
+# PROVISIONAL. Polarity is never implicit: does Amprion list where connection IS
+# possible, or where it is NOT? Verify before any extraction; getting it wrong
+# inverts every answer silently. Allowed: lists_where_possible | lists_where_not_possible | lists_state
+polarity: lists_state
+
+# Overridden by LONGSERIES_CONTACT in the environment; set a real mailto: there.
+contact: "https://github.com/workflow-tools/beelink-bonus"
+accept_extensions: [".pdf", ".xlsx", ".xls", ".csv", ".zip"]
+min_payload_bytes: 4096
+licence: none-analysed
+licence_evidence_url: null

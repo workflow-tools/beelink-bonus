@@ -10,21 +10,31 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+import time
 from pathlib import Path
 
 from .adapter import BaseAdapter
-from .config import ConfigError, load_source_config
+from .config import ConfigError, load_source_config, parse_cadence
 from .heartbeat import Heartbeat, run_with_heartbeat
 from .store import ContentAddressedStore
 
 
 def _load(path: str):
+    """Load a source YAML. LONGSERIES_CONTACT and LONGSERIES_HEARTBEAT_URL in the
+    environment override the file, so a real mailto: and a watchdog token never
+    have to be committed."""
     try:
-        return load_source_config(path)
+        c = load_source_config(path)
     except ConfigError as e:
         print(f"config error: {e}", file=sys.stderr)
         sys.exit(1)
+    if os.environ.get("LONGSERIES_CONTACT"):
+        c.contact = os.environ["LONGSERIES_CONTACT"]
+    if os.environ.get("LONGSERIES_HEARTBEAT_URL"):
+        c.heartbeat_url = os.environ["LONGSERIES_HEARTBEAT_URL"]
+    return c
 
 
 def cmd_validate(args) -> int:
@@ -51,6 +61,20 @@ def cmd_poll(args) -> int:
     return 3 if run.alerts else 0
 
 
+def cmd_schedule(args) -> int:
+    """Poll now, then every --every (default P1D). Polling more often than the
+    declared cadence is cheap — the store writes zero bytes for unchanged files —
+    and it bounds how late a change is noticed. Runs until stopped."""
+    every = parse_cadence(args.every).total_seconds()
+    while True:
+        try:
+            rc = cmd_poll(args)
+            print(f"[schedule] poll finished rc={rc}; sleeping {int(every)}s", file=sys.stderr)
+        except Exception as e:  # a crash must not stop the schedule; the missing heartbeat has already fired
+            print(f"[schedule] poll crashed: {e!r}; sleeping {int(every)}s", file=sys.stderr)
+        time.sleep(every)
+
+
 def cmd_show(args) -> int:
     config = _load(args.source)
     store = ContentAddressedStore(Path(args.data))
@@ -68,11 +92,13 @@ def cmd_show(args) -> int:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="longseries")
     sub = p.add_subparsers(dest="cmd", required=True)
-    for name, fn in (("poll", cmd_poll), ("show", cmd_show), ("validate", cmd_validate)):
+    for name, fn in (("poll", cmd_poll), ("schedule", cmd_schedule), ("show", cmd_show), ("validate", cmd_validate)):
         sp = sub.add_parser(name)
         sp.add_argument("source")
         if name != "validate":
             sp.add_argument("--data", required=True)
+        if name == "schedule":
+            sp.add_argument("--every", default="P1D", help="poll interval, ISO-8601 duration or daily/weekly (default P1D)")
         sp.set_defaults(fn=fn)
     args = p.parse_args(argv)
     return args.fn(args)

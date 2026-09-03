@@ -1,0 +1,29 @@
+# One container per long series, all from the same image. Add a series = add a
+# YAML under sources/ and a service block here. No code change.
+#
+#   docker compose up -d --build            # start every collector
+#   docker compose run --rm amprion poll /sources/amprion.yaml --data /data   # one-off poll
+#   docker compose run --rm amprion show /sources/amprion.yaml --data /data   # latest manifest + alerts
+#
+# Secrets/personal data stay out of the repo: put LONGSERIES_CONTACT and
+# LONGSERIES_HEARTBEAT_URL in a .env file next to this compose.yaml (gitignored).
+
+x-collector: &collector
+  build: .
+  image: longseries:local
+  restart: unless-stopped
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    - LONGSERIES_CONTACT
+    - LONGSERIES_HEARTBEAT_URL
+
+services:
+  amprion:
+    <<: *collector
+    container_name: longseries-amprion
+    command: ["schedule", "/sources/amprion.yaml", "--data", "/data", "--every", "P1D"]
+    volumes:
+      - ./sources:/sources:ro
+      - ${LONGSERIES_DATA:-./data}/de-tso-amprion-netzanschluss:/data

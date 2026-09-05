@@ -112,3 +112,32 @@ Facts verified on 2026-09-05 (details and tags in the patterns dossier
 The option register for this and other series lives in `registry/` (schema in
 `registry/README.md`); `pytest` checks it against `sources/`.
 
+## Addendum 2026-09-05 (evening) — owner browser check 3 closed from a cloud container; Directive half of kill criterion 3 closed
+
+`archive-probe.mjs` runs end to end from the cloud containers once Node is told to honour the
+proxy (`NODE_USE_ENV_PROXY=1`); the CDX preflight occasionally times out and a retry succeeds.
+Results, all `[HIGH]` on the CDX calls and the live re-fetch, `[MED]` on any absence:
+
+| Landing URL | Attested captures | Window | Live | Reading |
+|---|---|---|---|---|
+| Amprion "Darstellung der potenziellen Netzanschlussmöglichkeiten…" | **0** (exact, prefix and `Darstellung*`) | — | — | No Wayback backfill exists for the map or the supplementary PDFs; the series starts with our 2026-09-03 capture |
+| TransnetBW `netzanschlusskarte` | **0** (exact, prefix) | — | — | Same: no third-party backfill of the tooltip dataset |
+| 50Hertz `Vertragspartner/Netzkunden/Netzanschluss` | 29 captures of the page | 2019-02 → 2026 | 1 LIVE | Page prose only (the map is client-rendered); a prose backfill 2019–2026 exists if ever needed |
+| Amprion `/Netzkunden/Netzanschluss/` section prefix | 8 URLs, 34 captures | 2025-08 → 2026-04 | 3 LIVE, 3 MOVED, 2 GONE | The GONE pair is `Karten-über-das-Netzgebiet.html` (+utm variant): the VDE overview-map page was removed or moved, unrelated to the capacity series |
+
+Probe JSON is kept with the session's scratch material, not in this repo.
+
+**Directive (EU) 2019/944 Art. 31(3) as amended by Directive (EU) 2024/1711** (EUR-Lex
+consolidated text 02019L0944-20240716, fetched 2026-09-05) `[HIGH]`: distribution system
+operators "shall publish in a transparent manner clear information on the capacity available
+for new connections in their area of operation with high spatial granularity, respecting
+public security and data confidentiality, including the capacity under connection request and
+the possibility of flexible connection in congested areas … shall update that information on a
+regular basis, at least quarterly", and shall inform applicants of the status of their
+requests, updated at least quarterly; Art. 31(3b) lets Member States exempt undertakings
+serving fewer than 100,000 connected customers. **No retention, archive, versioning or
+central-platform duty.** The Directive half of `registry/schaltfeld.yaml` kill criterion 3
+therefore does not fire; the Regulation half was closed on 2026-09-05 (morning). Note the
+"respecting public security" clause: it is the hook under which the Bavarian DSOs withdrew
+their grid-display services from the Energie-Atlas Bayern (observed 2026-09-05, evening
+session; see the patterns dossier of that date).

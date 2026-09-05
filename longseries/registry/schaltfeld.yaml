@@ -105,8 +105,9 @@ kill_criteria:
     Altdaten-Archiv; any TSO ships an "aeltere Ausgaben" list)
   - A statutory retention or history duty appears in the parliamentary text of BR-Drs. 471/26 (grep archiv|histori|vorherige
     Fassung|aufbewahr on every new version)
-  - EU law turns out to require retention, a common format or central publication (Art. 50(4a) checked,
-    does not; Directive (EU) 2019/944 Art. 31(3) not yet read)
+  - EU law turns out to require retention, a common format or central publication (Art. 50(4a) checked
+    2026-09-05, does not; Directive (EU) 2019/944 Art. 31(3) as amended read 2026-09-05, does not - quarterly
+    publication duty on DSOs, no retention; see docs/SOURCES.md addendum)
   - BNetzA's supply-quality map grows a connection-capacity layer
   - 'The series stops changing: two consecutive s.17c editions with no transition at any tracked substation'
   - Nobody has used the wedge by the review date
@@ -130,7 +131,9 @@ ceiling:
   note: A dozen developer subscriptions plus two OEM licences; about one-twentieth of the stated ambition.
     A validation unit on the shared chassis, not the business.
 owner_checks:
-  - archive-probe.mjs probe on the three reachable TSO landing pages (Wayback is reachable from the Beelink)
+  - 'DONE 2026-09-05 (cloud container, NODE_USE_ENV_PROXY=1): archive-probe on the three TSO landing pages -
+    Amprion map page 0 captures, TransnetBW karte 0 captures, 50Hertz page 29 captures 2019-2026 (prose only);
+    no Wayback backfill exists for the map data. docs/SOURCES.md addendum 2026-09-05 (evening)'
   - 'dip.bundestag.de: status of BR-Drs. 471/26 after the 2026-09-25 Bundesrat sitting; re-run the archiv
     grep on each new text'
   - TenneT page and ArcGIS app from a browser; 50Hertz map data API request

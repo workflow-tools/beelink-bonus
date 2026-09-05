@@ -1,0 +1,75 @@
+# Option register entry (see registry/README.md). Not yet collected; how_to_build shows the no-code path.
+id: starlink-availability-status
+title: Starlink country and region service-status file (availability.json)
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-05'
+screened_with: vanishing-data-prospector v2 (Prospect chain on orbital compute), workflow-tools/patterns@claude/keen-einstein-03b947
+dossiers:
+  - https://github.com/workflow-tools/patterns/blob/claude/keen-einstein-03b947/docs/research/2026-09-05-vanishing-data-rescore-schaltfeld-and-orbital-prospect.md
+history:
+  - date: '2026-09-05'
+    status: option
+    note: Adjacent to the orbital-compute thesis (downlink markets follow the same national-authorisation
+      path); screened at stations 1, 2b, 4, 5; owner has not yet decided to collect
+collector:
+  built: false
+  sources: []
+  how_to_build: 'Landing-only source, no code change: landing_url https://api.starlink.com/public-files/availability.json,
+    accept_extensions [], expect_landing_text "coming_soon", declared_cadence P1D (measured: five country
+    transitions in 43 days). Record last-modified and x-goog-generation headers with every capture (the
+    chassis stores headers in index.jsonl). Conditional GET returns 304 with zero bytes. ~2 hours.'
+stations:
+  s1_archive:
+    result: PASS, near-miss incumbent
+    tag: HIGH
+    note: clarkzjw/starlink-geoip mirrors the cell-level protobuf, not this file, and has been dormant
+      since 2026-02-21; Idem Est sells a country tracker (USD 802-15,645) that does not carry SpaceX's
+      own status labels [MED].
+  s2b_buyers_later:
+    result: PASS 3/3
+    tag: MED
+    note: 'Comparable: Ookla/Speedtest (measurement corpus collected for a decade before regulator-mandated
+      broadband mapping created the demand). Disputed: market-entry status by definition. Leading: five
+      transitions in 43 days [HIGH]; a cottage industry of narrative trackers.'
+  s4_licence:
+    result: PASS with a caveat
+    tag: MED
+    note: 'robots.txt does not touch /public-files/; the ToS, AUP and privacy policy (OpenTermsArchive
+      mirror) contain no scraping or TDM clause; the file is served with x-robots-tag: none, an indexing
+      directive, not a reuse licence.'
+  s5_withdrawal:
+    result: PASS, politically exposed
+    tag: MED
+    note: 'The "blacklisted" and "pending_regulatory" labels are the hazard: a public changelog of those
+      is a geopolitical story and gets a file walled. Discretion over publicity.'
+future_question: On what date did the operator's own published status for this market change, and what
+  did it say when our filing went in?
+buyers_now: []
+buyers_later:
+  - type: competitor market-entry teams (Eutelsat OneWeb, Amazon Leo), national regulators, telecom analysts
+    evidence: Ookla route; Idem Est price band
+    tag: MED
+premium:
+  setup_hours: 2
+  monthly_eur: 0
+  note: Conditional GET; hourly poll costs headers only
+wedge: 'A per-country status-history page plus an RSS feed of transitions (not novel: qawemlilo/starlink
+  does the alert half free, which is evidence about willingness to pay).'
+kill_criteria:
+  - clarkzjw, Idem Est or any funded party starts publishing dated availability.json snapshots
+  - SpaceX exposes bucket versioning or a status history
+  - Fewer than about one transition a month sustained over two quarters
+  - /public-files/ appears in robots.txt or a TDM reservation appears in the terms
+  - Nobody has used the wedge by the review date
+review_date: '2026-12-05'
+review_note: 'Checkpoint: re-clone the mirror, re-check the terms; full option review 2027-09-05.'
+route: portfolio
+ceiling:
+  tag: LOW
+  note: Portfolio unit with a few-large upside on Ookla's route (operators and regulators), which is five
+    conversations, not SEO.
+owner_checks:
+  - Open the Starlink ToS, AUP and privacy policy in a browser and confirm the mirror's reading
+  - Confirm /public-files/ sits outside every Disallow

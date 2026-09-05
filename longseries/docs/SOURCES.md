@@ -80,3 +80,35 @@ von drei Monaten"*; offer phase *"etwas über zwei Monate"*; the procedure
    `archive-probe.mjs probe` against the three landing URLs above; this
    container cannot reach web.archive.org. Any recoverable earlier editions
    are free backfill for the series.
+
+## Addendum 2026-09-05 — the legal floor under the maps, and the register
+
+Facts verified on 2026-09-05 (details and tags in the patterns dossier
+`docs/research/2026-09-05-vanishing-data-rescore-schaltfeld-and-orbital-prospect.md`):
+
+- **Netzanschlusspaket, BR-Drs. 471/26 (cabinet bill of 2026-07-29, 81 pp).** § 17c(1) EnWG-RegE
+  obliges every *Betreiber von Elektrizitätsversorgungsnetzen* to publish available connection
+  capacity at the HöS/HS and HS/MS transformation levels *"auf ihrer jeweiligen Internetseite auf
+  einer geografischen Karte"* and to update it **monthly**; *"Auf die tatsächliche Verfügbarkeit …
+  besteht kein Rechtsanspruch."* The bill contains **no retention, archive or history duty** (zero
+  hits for `archiv|histori|vorherige Fassung|aufbewahr`) and no BNetzA Festlegung power over § 17c(1)
+  `[HIGH]`. Entry into force: the day after promulgation; the DSO Auskunft in § 17c(2) from
+  2028-01-01. Status: Bundesrat first passage 2026-09-25; Bundestag pending — owner check.
+- **Reg. (EU) 2019/943 Art. 50(4a)** already requires TSOs to publish available capacity for new
+  connections *"at least every month"*, with no retention duty `[HIGH]`. Amprion's page still read
+  *"Stand: April 2026"* and TransnetBW's *"Stand 05/2026"* on 2026-09-05.
+- **Consequences for this chassis:** the vanishing property survives the law; the cadence becomes
+  monthly (raise `declared_cadence` when the first monthly edition is observed, never before); the
+  publisher set grows from four TSOs to every operator with a 110 kV grid, which is a parser-per-
+  operator *product* decision, not an option (see `registry/schaltfeld.yaml`).
+- **Withdrawal in reverse, watched:** Capacitypedia (ENTSO-E / EU DSO Entity, launched 2026-05-22)
+  links to national maps and archives nothing; Commission Notice C/2025/6703 recommends single
+  national platforms and forward-looking maps; VNBdigital (§ 14e) sits under a BNetzA Festlegung
+  power. Any of these adding a dated archive is a kill criterion in the register.
+- **BK6-25-287 (BNetzA, 2026-05-04), BESS Germany 1 GmbH v 50Hertz:** a dispute decided on
+  *"verfügbare Schaltfelder"* and *"zeitlich frühere Netzanschlussanträge"* — the past state of a bay
+  is already argued over `[HIGH]`.
+
+The option register for this and other series lives in `registry/` (schema in
+`registry/README.md`); `pytest` checks it against `sources/`.
+

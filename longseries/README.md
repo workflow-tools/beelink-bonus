@@ -95,6 +95,17 @@ For the landing page, "changed" means the **visible text** changed. Pages like
 changes, and they do not mint a new blob. Each poll's raw HTML is still kept
 verbatim under `captures/<id>/landing.html`.
 
+## The register — decisions and dates, next to the code
+
+`registry/` holds one YAML per series the owner has decided about: verdict,
+which decision it is about (collect vs productize), the future buyer's
+question, the option premium, the wedge, pre-committed kill criteria and a
+review date. Schema in `registry/README.md`; `pytest` checks every built
+collector names real `source_id`s. The Schaltfeld series is registered as an
+**OPTION** (collect now, review 2026-11-30); two orbital sources are
+registered but not yet collected, each with a no-code path to a source
+config.
+
 ## Adding a series
 
 1. Copy `sources/amprion.yaml`, fill it in. `polarity` is mandatory and never

@@ -1,0 +1,79 @@
+# Option register entry (see registry/README.md). Not yet collected; how_to_build shows the no-code path.
+id: spacex-rideshare-manifest
+title: SpaceX Smallsat Rideshare bookable-flight manifest and rate card
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-05'
+screened_with: vanishing-data-prospector v2 (Prospect chain on orbital compute), workflow-tools/patterns@claude/keen-einstein-03b947
+dossiers:
+  - https://github.com/workflow-tools/patterns/blob/claude/keen-einstein-03b947/docs/research/2026-09-05-vanishing-data-rescore-schaltfeld-and-orbital-prospect.md
+history:
+  - date: '2026-09-05'
+    status: option
+    note: Surfaced by Prospect link 2 (launch slots are a bottleneck); screened at stations 1, 2b, 4,
+      5; owner has not yet decided to collect
+collector:
+  built: false
+  sources: []
+  how_to_build: 'Landing-only source on the existing chassis, no code change: landing_url https://api-rideshare.spacex.com/api/v1/flights,
+    accept_extensions [], expect_landing_text "launchDate", declared_cadence P1D with [LOW] evidence (publisher
+    states none), plus a second source for https://api-rideshare.spacex.com/api/v2/price. Each poll stores
+    the JSON as the landing payload; disposition on content hash. ~2 hours.'
+stations:
+  s1_archive:
+    result: PASS
+    tag: HIGH
+    note: 'No manifest history anywhere: the API has no date parameter or version; the static bucket holds
+      only contract PDFs (versioning state indeterminable from outside, [MED]); GitHub code search finds
+      nobody collecting; Launch Library 2 keeps announced launches, not bookable ports, and none of the
+      2027 slots.'
+  s2b_buyers_later:
+    result: PASS on tests 2 and 3
+    tag: MED
+    note: 'Underwritten: Aon puts 2026 launch working capacity at ~$425 m; the question is what launch
+      capacity was purchasable on the date a schedule was underwritten and when the slot left the manifest.
+      Leading indicators: the publisher''s own ladder $5,500 (2023) -> $7,500/kg (2027) [HIGH]; Starcloud
+      $420 m raised and "launch is pretty constrained". Comparable buyer only by mechanism (Keepa) [MED].'
+  s4_licence:
+    result: PASS
+    tag: MED
+    note: No licence statement; no robots.txt on the API host; the site terms and the 13-page T&C contain
+      no robot, scraping, automated-access or data-mining clause [HIGH on the absence]. Derived facts
+      only; never republish the JSON or PDFs; lawyer before the UG.
+  s5_withdrawal:
+    result: PASS, highest risk on the list
+    tag: LOW
+    note: Anonymous by convenience, not policy; a login is a product decision away; the booking app may
+      be replaced with the Falcon 9 sunset. Publish derived facts without naming the endpoint; one poll
+      a day.
+future_question: What launch capacity, to which orbits, was purchasable on the date we signed, and when
+  did the slot leave the manifest?
+buyers_now: []
+buyers_later:
+  - type: space underwriters (Aon, Gallagher) and investors doing orbital-compute diligence
+    evidence: Aon Q1 2026 capacity report; the price ladder
+    tag: MED
+premium:
+  setup_hours: 2
+  monthly_eur: 0
+  note: 795 B + 4.6 KB per poll, no login, no JavaScript
+wedge: 'A dated "rideshare slots on offer" table joining the manifest with Launch Library 2: which announced
+  rideshare missions are no longer bookable (today Transporter 18 and Bandwagon 5).'
+kill_criteria:
+  - '90 days of daily polling with zero change to the flight list (churn gate): there is no series'
+  - SpaceX publishes a manifest history or dated rate cards
+  - The endpoint gains a login, or a robots.txt or terms clause barring automated access
+  - A funded party starts publishing the same series
+  - The booking application is retired with Falcon 9
+review_date: '2026-12-05'
+review_note: Churn gate at 90 days; full option review 2027-09-05.
+route: portfolio
+ceiling:
+  tag: LOW
+  note: One validation unit; a few-large route exists only if the LL2 join matures into a launch-availability
+    series an insurer or investor pays for.
+owner_checks:
+  - 'Open the booking flow in a browser without booking: confirm the three 2027 SSO flights and whether
+    remaining port capacity is shown to a signed-in user'
+  - Settle the static bucket versioning state if a browser can

@@ -1,0 +1,138 @@
+# Option register entry (see registry/README.md). Evidence lives in the linked dossiers.
+id: schaltfeld-de-tso-netzanschluss
+title: German TSO grid-connection capacity maps (the Schaltfeld series)
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-05'
+screened_with: vanishing-data-prospector v2 (workflow-tools/patterns@claude/keen-einstein-03b947, 2026-09-05)
+dossiers:
+  - https://github.com/workflow-tools/patterns/blob/claude/keen-einstein-03b947/docs/research/2026-09-05-vanishing-data-rescore-schaltfeld-and-orbital-prospect.md
+  - https://github.com/workflow-tools/patterns/blob/claude/keen-einstein-03b947/skills/vanishing-data-prospector/references/worked-example-tso.md
+history:
+  - date: '2026-09-03'
+    status: product
+    note: GO on the pre-redraft screen (worked example); collector built and live-verified against Amprion,
+      TransnetBW, 50Hertz
+  - date: '2026-09-05'
+    status: option
+    note: 'Re-scored under the redraft: station 2a (buyers now) fails, 2b (buyers later) passes 3/3; GO
+      -> OPTION; scope four TSOs only'
+collector:
+  built: true
+  sources:
+    - de-tso-50hertz-netzanschluss
+    - de-tso-amprion-netzanschluss
+    - de-tso-transnetbw-netzanschlusskarte
+  not_built:
+    - publisher: TenneT TSO GmbH
+      why: browser challenge on the page and robots.txt naming AI crawlers; ArcGIS Experience app b5f2b335e4224d60bbaf1d3f33248a1e;
+        owner browser check first (docs/SOURCES.md)
+  note: Under the Netzanschlusspaket bill (s.17c EnWG-RegE) every network operator would publish a monthly
+    map; a 69-479 publisher sweep is a parser-per-operator PRODUCT decision needing station 2a, not an
+    option.
+stations:
+  s1_archive:
+    result: PASS
+    tag: HIGH
+    note: 'No publisher or vendor archive: TSOs publish the current edition only; the cabinet bill BR-Drs.
+      471/26 s.17c has no retention or archive duty (zero hits for archiv|histori|vorherige Fassung in
+      81 pp); Reg. (EU) 2019/943 Art. 50(4a) requires monthly updates, no retention. Capacitypedia (ENTSO-E/DSO
+      Entity, May 2026) links to national maps and archives nothing. Coverage map NOT built: web.archive.org
+      blocked from the agent containers - owner runs archive-probe from the Beelink.'
+  s2a_buyers_now:
+    result: FAIL
+    tag: HIGH
+    note: No organisation could be shown consulting a prior edition; none existed before 2026-04-01. Named
+      developers (Kyon Energy, BayWa r.e., Statkraft), consultancy (Roedl & Partner), vendors (deeeper.technology,
+      Nefino) are plausible users, not evidenced buyers of history.
+  s2b_buyers_later:
+    result: PASS 3/3
+    tag: HIGH
+    note: 'Comparable: GridTracker (US interconnection-queue history, paid tier) [MED]; PVcase Prospect
+      and Searchland sell a consolidated CURRENT view [HIGH]. Disputed: BNetzA BK6-25-287 of 2026-05-04,
+      BESS Germany 1 GmbH v 50Hertz, decided on free Schaltfelder and queue rank [HIGH]. Traded: Green
+      Flexibility/Kajoni 750 MW conditioned on the maturity process [HIGH]. Leading indicators: SMARD
+      2026-08-20, 18,158 storage requests in 2025 (+194 %), 54.2 GW of 573.5 GW approved [HIGH].'
+  s3_churn:
+    result: PASS
+    tag: HIGH
+    note: Today one edition per Reifegrad cycle (Amprion Stand April 2026, TransnetBW Stand 05/2026, unchanged
+      on 2026-09-05); statutory monthly once s.17c is in force. Superseded values stay decision-relevant
+      12-36 months for developers, lenders, disputes.
+  s4_licence:
+    result: PASS (carried from 2026-09-03, not re-run)
+    tag: MED
+    note: Non-binding courtesy publications, no licence statement; derived facts only; robots.txt and
+      terms snapshotted per poll. Lawyer before the UG touches it; collect as Einzelunternehmen.
+  s5_withdrawal:
+    result: PASS with named risks
+    tag: HIGH
+    note: 'Subject objection nil (switchgear bays). Publisher withdrawal low and falling (publication
+      becomes a legal duty). Withdrawal in reverse is the live risk: Commission Notice C/2025/6703 urges
+      single national platforms and forward-looking maps; VNBdigital sits under a s.14e(7) BNetzA Festlegung
+      power; BNetzA supply-quality map "wird fortlaufend weiterentwickelt".'
+  s6_validation:
+    result: option mode, not started
+    tag: n/a
+    note: Wedge not yet offered to anyone. Current-demand mode not run.
+future_question: Wie viele freie Schaltfelder wies Umspannwerk X am Tag unseres Antrags aus, und was hatte
+  der UeNB dazu veroeffentlicht?
+buyers_now: []
+buyers_later:
+  - type: battery-storage and renewables project developers
+    evidence: Reifegrad cycles make filing timing and substation choice recurring decisions; BK6-25-287
+      shows the past state argued over
+    tag: HIGH
+  - type: lenders and buyers doing diligence on projects with a connection
+    evidence: '"ein gesicherter Netzanschluss ist der wertvollste Asset im gesamten Datenraum" (Dicama);
+      Green Flexibility/Kajoni'
+    tag: MED
+  - type: grid-connection consultancies and site-selection software vendors
+    evidence: Roedl & Partner service line; deeeper energy maps at EUR 249/month excludes exactly this
+      layer
+    tag: MED
+premium:
+  setup_hours: 0
+  monthly_eur: 5
+  note: Collector exists; the euros are the VPS share once collection moves off the Beelink per ADR-001
+    Q1
+wedge: A change alert per substation (before/after state with both editions attached) plus a consolidated
+  four-TSO table; offer to two developers and one consultancy, free; usage is the evidence.
+kill_criteria:
+  - A central archive or versioned publication of the maps is mandated or published (BNetzA Festlegung
+    under s.14e(7); the s.14e platform gains a capacity layer; netztransparenz.de adds the maps to its
+    Altdaten-Archiv; any TSO ships an "aeltere Ausgaben" list)
+  - A statutory retention or history duty appears in the parliamentary text of BR-Drs. 471/26 (grep archiv|histori|vorherige
+    Fassung|aufbewahr on every new version)
+  - EU law turns out to require retention, a common format or central publication (Art. 50(4a) checked,
+    does not; Directive (EU) 2019/944 Art. 31(3) not yet read)
+  - BNetzA's supply-quality map grows a connection-capacity layer
+  - 'The series stops changing: two consecutive s.17c editions with no transition at any tracked substation'
+  - Nobody has used the wedge by the review date
+  - 'Licence changes: a TSO adds a licence statement barring re-use, or a machine-readable TDM reservation
+    on the map paths'
+  - 'A leading indicator reverses: SMARD monitoring shows requests and approvals falling year on year'
+  - Capacitypedia moves from links to hosted data, or publishes harmonised capacity parameters the operators
+    adopt
+  - BNetzA issues a s.14e(7) Festlegung adding a hosting-capacity layer to VNBdigital, or acts on the
+    "single national platforms" recommendation
+  - Any German TSO publishes expected capacity for coming years, supplying the trend free
+review_date: '2026-11-30'
+review_note: 'Brought forward from the twelve-month default: Bundesrat first passage 2026-09-25, Bundestag
+  committee stage, and the next Amprion/TransnetBW edition (overdue on Amprion''s own "three times a year").
+  Re-run stations 1, 2b and 5 in an hour.'
+route: portfolio
+ceiling:
+  eur_per_year_low: 80000
+  eur_per_year_high: 150000
+  tag: LOW
+  note: A dozen developer subscriptions plus two OEM licences; about one-twentieth of the stated ambition.
+    A validation unit on the shared chassis, not the business.
+owner_checks:
+  - archive-probe.mjs probe on the three reachable TSO landing pages (Wayback is reachable from the Beelink)
+  - 'dip.bundestag.de: status of BR-Drs. 471/26 after the 2026-09-25 Bundesrat sitting; re-run the archiv
+    grep on each new text'
+  - TenneT page and ArcGIS app from a browser; 50Hertz map data API request
+  - 'Kyon Energy site (301 not followed by the agents): project list and a named Netzanschluss lead'
+  - 'Netbeheer Nederland capaciteitskaart: does it archive monthly versions?'

@@ -1,0 +1,164 @@
+# Option register entry (see registry/README.md). Not yet collected; how_to_build shows the no-code path.
+# Evidence: the EV-charging dossier in patterns (linked below). Screen 2026-09-06, skeptic pass recorded there.
+id: bnetza-ladesaeulenregister-monthly
+title: BNetzA Ladesaeulenregister - the monthly per-Ladeeinrichtung file, deleted at each publication (transition record)
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-06'
+screened_with: vanishing-data-prospector v2 (Prospect chain on EV charging, AFIR dynamic layer), workflow-tools/patterns@claude/vanishing-data-prospector-setup-e37mz6
+dossiers:
+  - https://github.com/workflow-tools/patterns/blob/claude/vanishing-data-prospector-setup-e37mz6/docs/research/2026-09-06-vanishing-data-prospect-ev-charging.md
+  - https://github.com/workflow-tools/patterns/blob/claude/vanishing-data-prospector-setup-e37mz6/docs/research/2026-09-06-vanishing-data-prospect-link1-ledger.md
+history:
+  - date: '2026-09-06'
+    status: option
+    note: 'Prospect chain on EV charging: the headline AFIR dynamic layer is not an option at any fidelity (granted
+      channel and project at full fidelity; archived openly by NVBW/MobiData BW at station fidelity); the register
+      the owner assumed archived is the thing that vanishes. Screened at all six stations in option mode; 2a FAIL,
+      2b PASS 3/3; churn measured on two editions. Owner has not yet decided to collect.'
+collector:
+  built: false
+  sources: []
+  how_to_build: 'Landing-only source on the chassis, no code change for storage: landing_url
+    https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/start.html; discovery by link
+    scraping (hrefs on data.bundesnetzagentur.de whose link text starts "Liste der Ladesaeulen"; never construct dated
+    URLs); accept_extensions [".csv", ".xlsx"] (the ?__blob=publicationFile aggregate workbook is captured too, 0.4 MB);
+    expect_landing_text "Liste der Ladesaeulen"; expect_min_documents 2; declared_cadence P1M (FAQ: "Die Liste wird
+    monatlich aktualisiert und steht zum Download zur Verfuegung."); polarity lists_state; min_payload_bytes 300000;
+    licence CC-BY-4.0 with licence_evidence_url = the FAQ; poll weekly (--every P7D), conditional GET (ETag and
+    Last-Modified present), generous per-request timeout (the host is slow). Carry ~87 MB/month, ~1 GB/year.
+    Extraction later, remote (no Beelink dependency): utf-8-sig, ";" delimiter, header at the "Ladeeinrichtungs-ID"
+    line, decimal comma in lat/lon; valid-time = "Letzte Aktualisierung vom", transaction-time = download time; diff
+    keyed on Ladeeinrichtungs-ID and EVSE-ID1..6; SUPPRESS operator names that do not match a legal-entity/trade
+    pattern (natural persons emitted as "natuerliche Person (anonymisiert)" at Kreis level). Alerts: landing 404 P0,
+    no new file after 45 days P1, payload < 40 MB P1, header line not found P1. ~3 h.'
+  not_built:
+    - publisher: Bundesnetzagentur, daily "oeffentliche Schnittstelle" (web service)
+      why: granted channel - obtained by e-mail with "Voraussetzungen fuer die Nutzung"; PARKED; the monthly file is the
+        anonymous public surface and the archive must never depend on the API
+    - publisher: Bundesnetzagentur, Ladesaeulenkarte (ArcGIS FeatureServer)
+      why: anonymous queries answer "Token Required" (code 499) - walled; owner browser check for date or archive controls
+  note: 'Free backfill before the first capture: Wayback bodies of 2025-07-18, 08-26, 10-23, 12-09 (CSV, complete) and
+    2025-06-17 (XLSX); the 2026-01-28 XLSX capture is truncated at 5 MiB; no capture between 2026-02-12 and 2026-09-01
+    - those editions are lost unless someone else kept them. Schleswig-Holstein open data holds 24 Land subsets
+    2022-02..2024-07 (CC BY 4.0). The 2021-23 generations have a different schema (26 columns, no ID).'
+stations:
+  s0_refusals:
+    result: PASS with a binding design constraint
+    tag: HIGH
+    note: 'Institutional and physical subjects; derived facts only; no contact. ~3,843 of 11,755 distinct operator
+      strings look like natural persons (4,975 rows, 4.3 %; count exact, classification heuristic) - a dated history
+      naming a private individual''s charge point is a different processing purpose from the regulator''s publication:
+      that slice is BLOCKED unless suppressed; the option survives without it. Vanished-ID counts per operator are
+      facts about register rows, never statements about solvency.'
+  s1_archive:
+    result: PASS for the per-point record; KILL for aggregates
+    tag: HIGH
+    note: 'Probe exit 0: 11 attested dated files 2025-06-17..2026-01-28, 11 GONE (404); orchestrator HEAD 2026-09-06 on
+      two attested files 404, current file 200. Publisher keeps aggregate history only ("historische Daten seit 2016
+      in quartalsweiser Aufloesung", Ladeinfrastruktur in Zahlen workbook). No funded panel: NVBW/MobiData BW states a
+      monthly bnetza_api intent but 0 rows exist in its history files and datastore (four files and the live datastore
+      checked); NLL cleans a monthly series internally and publishes aggregates; Eco-Movement/Chargeprice/chargecloud
+      keep their own databases. Retention duty: none - LSV s.4 creates a notification record, no publication or
+      retention clause; the published list is courtesy output.'
+  s2a_buyers_now:
+    result: FAIL
+    tag: HIGH
+    note: 'Bundeskartellamt (uses the register as population; can request the internal record), CUBOS (diligence,
+      episodic), NOW/NLL (builds, does not buy), Eco-Movement/chargecloud (sell their own history) - no three names
+      with a recurring budgeted decision on the history today.'
+  s2b_buyers_later:
+    result: PASS 3/3
+    tag: HIGH
+    note: 'Comparable: Eco-Movement sells "historical data for all other modules" [HIGH]; Chargeprice history tiers,
+      elvah/chargecloud [MED]; North Data / Shovels register-history comparables [MED]. Traded: three CPO portfolio
+      transactions in six months (CUBOS: SWARCO 12/2025, ChargeOne 04/2026 out of insolvency, TotalEnergies B2B
+      ~6,000 points 08.07.2026) [HIGH]. Disputed: BKartA 01.10.2024 final report - local markets, municipal land
+      allocation criticised, the register is the population basis [HIGH]. Indicators: register +15.1 % in 8.7 months;
+      NLL "kuenftig haeufiger aktualisiert"; Masterplan II monitoring [HIGH].'
+  s3_churn:
+    result: PASS (measured)
+    tag: HIGH
+    note: 'Declared monthly (FAQ). Measured 2025-12-09 -> 2026-09-01: 4,378 Ladeeinrichtungen vanished (~501/month),
+      19,620 added (~2,247/month, 3,312 of them with pre-2025 commissioning dates), among 96,823 persisted IDs 5,346
+      operator changes (~612/month), 1,495 public-key changes (~171/month), 2,880 EVSE-ID changes. No decommissioned
+      status exists in the file (In Betrieb 116,423 / In Wartung 20) - removal is deletion.'
+  s4_licence:
+    result: PASS (lookup)
+    tag: HIGH
+    note: 'FAQ: CC BY 4.0, attribution "bundesnetzagentur.de"; Impressum names a (non-existent) "Datenlizenz Deutschland
+      - Namensnennung - Version 4.0" for data files plus an access-etiquette clause; no robots on the data host. A
+      licence does not license GDPR processing - the suppression rule is the control. Lawyer before the UG touches it:
+      yes (natural-person slice; attribution wording on a paid product).'
+  s5_withdrawal:
+    result: PASS with kill criteria
+    tag: HIGH
+    note: 'Publisher invites re-use of the monthly file; the map API is token-walled and the new daily interface is keyed
+      - the file could be retired behind the API (undated). Withdrawal in reverse: NVBW monthly bnetza_api intent
+      (0 rows today, station level), NLL dashboard extensions, BNetzA''s own aggregate history since 2016. Publicity is
+      not a risk: the licence requires naming the source.'
+  s6_validation:
+    result: option mode, register set; wedge not yet offered
+    tag: n/a
+    note: Current-demand mode not run.
+future_question: What did the Bundesnetzagentur register say about these charge points month by month - when did each
+  first appear, under which operator, with which power and public key, and when did it disappear - before we signed,
+  when the land was allocated, or on the date of this signed meter record?
+buyers_now: []
+buyers_later:
+  - type: CPO consolidators and their M&A advisers
+    evidence: 'CUBOS: SWARCO 12/2025, ChargeOne 04/2026 (insolvency), TotalEnergies B2B ~6,000 points 08.07.2026; EVN/BayWa
+      Mobility Charging 02.09.2026'
+    tag: HIGH
+  - type: competition counsel and parties in Bundeskartellamt local-market cases; municipal legal departments in
+      concession disputes
+    evidence: BKartA 01.10.2024 final report uses the register as population and criticises municipal land allocation;
+      VG Muenchen M 28 K 23.147 (Qwello); NLL/Noerr Handreichung 2026-08-20 on documentation
+    tag: HIGH
+  - type: charging-data vendors embedding register history
+    evidence: Eco-Movement sells historical data for all modules; chargecloud Hub "Analyze" announced for Q4 2026
+    tag: MED
+  - type: Eichrecht dispute parties (public-key rotation lookup)
+    evidence: ~170 public-key changes per month measured
+    tag: LOW
+premium:
+  setup_hours: 3
+  monthly_eur: 1
+  note: ~87 MB/month raw (CSV + XLSX + workbook), ~1 GB/year; extraction is plain CSV and runs remote
+wedge: A monthly "Register-Aenderungen" table and alert per Landkreis and per legal-entity operator (new points,
+  withdrawn points, operator changes, power upgrades, public-key rotations) computed from the last two files, cited
+  to bundesnetzagentur.de; offered free to two or three people near the future buyer (a consolidator's corporate
+  development contact, an e-mobility M&A adviser, a Landkreis e-mobility coordinator).
+kill_criteria:
+  - NVBW's historised resource starts carrying bnetza_api rows monthly AND BNetzA or NLL publish per-point history or
+    stop deleting dated files (a probe shows a superseded file LIVE, or the start page grows an "Archiv" link) -
+    re-screen station 1
+  - Two consecutive months with no new dated file linked from start.html (the file retired behind the keyed daily
+    interface) - series ended
+  - Licence or attribution wording changes, or a robots.txt / TDM reservation appears on either host
+  - Nobody outside the owner has opened the change table or the alert twice by the review date
+  - The consolidation indicator reverses - no German CPO portfolio transaction in twelve months
+  - A schema change drops Ladeeinrichtungs-ID without a mapping
+  - A MobiData BW daily file contains bnetza_api rows at EVSE level (check one file per quarter)
+review_date: '2027-09-06'
+review_note: 'Twelve months. Interim station-1 re-check 2027-03-01: NVBW bnetza_api rows; chargecloud Hub "Analyze" as a
+  competing history product; NLL dashboard scope.'
+route: portfolio
+ceiling:
+  eur_per_year_low: 24000
+  eur_per_year_high: 120000
+  tag: LOW
+  note: 10-20 niche subscribers at EUR 200-500/month plus diligence extracts at EUR 2k-20k each; one-fortieth of the
+    ambition; the floor clears with one or two subscribers. Odds the buyer conversation happens - about one in three
+    within twelve months if the wedge goes to ten named people, near zero fire-and-forget.
+owner_checks:
+  - 'Ladesaeulenkarte start page in a browser: any date filter, "Stand", "aeltere Daten" or export control (form
+    controls are invisible to the scan)'
+  - 'NLL Pkw-LadeinfrastrukturMONITORING (nationale-leitstelle.de, unreachable from the container): anything per point,
+    or a download of the cleaned monthly file?'
+  - 'From a browser, fetch the six other 2025-26 Wayback bodies (2025-06-17, 07-18, 08-26, 09-24, 10-23, 2026-01-28)
+    for the backfill; check the 2021 and 2022-23 captures'
+  - 'Mobilithek terms of use (client-rendered) - needed before any Mobilithek-sourced series, including the tariff
+    residue re-open'
+  - 'Whether to e-mail ladesaeulenregister@bnetza.de for the daily interface description (granted channel, optional)'

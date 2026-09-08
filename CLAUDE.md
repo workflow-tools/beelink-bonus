@@ -2,7 +2,7 @@
 
 > **Purpose:** Single source of truth for any Claude session working on the Beelink AI server strategy.
 > Any new thread should read this file first.
-> Last updated: March 2026.
+> Last updated: September 2026.
 
 ---
 
@@ -59,6 +59,11 @@ ollama serve                              # Ollama auto-detects 890M GPU
 
 ## Existing Product Portfolio (Relevant Context)
 
+> **Status note (2026-09-05, from the owner):** *deployed* means reachable, not
+> used. **No product currently has users.** Do not infer adoption, revenue or
+> traction from "LIVE" or "Deployed" below — a previous session did and was
+> wrong. The unrun step across the whole portfolio is asking anyone to pay.
+
 ### Live / Code-Complete Products
 - **WritingPAD** (writingpad.co.uk) — UK nursing feedback transformation. LIVE.
 - **ProPrecept Ireland** (proprecept.ie) — Irish nursing feedback. Code complete.
@@ -67,8 +72,8 @@ ollama serve                              # Ollama auto-detects 890M GPU
 - **Assessment Wizard** — Academic assessment workflows. Early stage.
 
 ### Pre-MVP / Design Phase
-- **EHCP Audit** — UK SEND compliance analysis (GRUND framework, multi-agent). Dissertation Paper 2.
-- **IEP Checker** — US IEP compliance (IDEA + 50 states + DoDEA). Dissertation extension.
+- **EHCP Audit** — UK SEND compliance analysis (GRUND framework, multi-agent). **Shelved 2026:** the UK is removing the regulations and document types the analysis was built around, so the regulatory basis is going away. Do not propose work on it without asking first.
+- **IEP Checker** — US IEP compliance (IDEA + 50 states + DoDEA).
 - **Rebeka** — SA clinical placement management platform (B2B, multi-market).
 
 ### Architecture Patterns
@@ -80,15 +85,13 @@ ollama serve                              # Ollama auto-detects 890M GPU
 
 ## How the Beelink Connects to Existing Products
 
-1. **EHCP Audit local inference** — The GRUND framework already has provider abstraction for cloud + local models. The Beelink running Qwen-3.5 or Mistral via Ollama is the "self-hosted" leg of the 2×2 factorial design (cloud vs local × debate vs no-debate). This is both product feature AND dissertation experiment.
+1. **Assessment Wizard "Private Cloud"** — FERPA-compliant local deployment for US institutions that cannot send student data to cloud APIs. Natural premium tier.
 
-2. **Assessment Wizard "Private Cloud"** — FERPA-compliant local deployment for US institutions that cannot send student data to cloud APIs. Natural premium tier.
+2. **Faculty Wizard "Private Cloud"** — Same concept for universities with strict data policies.
 
-3. **Faculty Wizard "Private Cloud"** — Same concept for universities with strict data policies.
+3. **Fine-tuning lab** — QLoRA fine-tuning on domain-specific data (e.g. nursing terminology) for improved product quality.
 
-4. **Fine-tuning lab** — QLoRA fine-tuning on domain-specific data (nursing terminology, SEND law, etc.) for improved product quality.
-
-5. **Dissertation compute** — Running controlled experiments locally eliminates API cost as a variable.
+4. **Long-series extraction** — `longseries/` collects remotely and always; the Beelink parses the captured documents locally and may lag by days. See `longseries/README.md` and `longseries/registry/`.
 
 ---
 

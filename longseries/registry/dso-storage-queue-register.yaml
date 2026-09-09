@@ -1,0 +1,186 @@
+# Option register entry (see registry/README.md). Not yet collected; how_to_build shows the no-code path.
+# Evidence: the battery-storage dossier in patterns (linked below). Screen 2026-09-06 (drafted by the screen lane,
+# reviewed and corrected by the orchestrating session); the skeptic lane did not run (usage credits exhausted) - the
+# deciding artefact (the EWE page overwrite) was re-verified by the orchestrator instead.
+id: dso-storage-queue-register
+title: German DSO storage-queue and reservation-state register (the operator-page sentences - EWE NETZ primary, Netze BW watch)
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-06'
+screened_with: vanishing-data-prospector v2 (Prospect chain on battery storage and the Reifegrad cycles), workflow-tools/patterns@claude/vanishing-data-prospector-setup-e37mz6
+dossiers:
+  - https://github.com/workflow-tools/patterns/blob/claude/vanishing-data-prospector-setup-e37mz6/docs/research/2026-09-06-vanishing-data-prospect-bess-reifegrad.md
+  - https://github.com/workflow-tools/patterns/blob/claude/vanishing-data-prospector-setup-e37mz6/docs/research/2026-09-06-vanishing-data-prospect-link1-ledger.md
+history:
+  - date: '2026-09-06'
+    status: option
+    note: 'Prospect chain on the German storage queue: nine of ten candidates killed because the publisher is the
+      archivist (netztransparenz keeps superseded Reifegrad documents live, SMARD and MaStR archive, BK6 decisions
+      are promulgated). The one thin survivor: undated queue and reservation-state sentences on reachable DSO pages,
+      overwritten in place. Screened at all six stations in option mode: 2a FAIL, 2b PASS 3/3; the Mitnetz sub-signal
+      dropped (rules, not state). Owner has not yet decided to collect.'
+collector:
+  built: false
+  sources: []
+  how_to_build: 'Two landing-only sources on the chassis, no code change: (1) source_id de-dso-ewe-netz-grossspeicher,
+    publisher EWE NETZ GmbH, landing_url https://www.ewe-netz.de/einspeiser/strom/ihr-netzanschluss/grossspeicher,
+    accept_extensions [], expect_landing_text "Anschlussanfragen fuer Grossspeicher" (present live and in both
+    attested captures), declared_cadence P6M [LOW - the publisher states none: "Derzeit", "Momentan", "Sobald ...
+    neue Kapazitaeten ... werden wir diese Informationen transparent veroeffentlichen"; observed one overwrite of
+    the figure and two edits of the state text in eleven months], polarity lists_where_not_possible ("zurzeit keine
+    neuen Netzverknuepfungspunkte reservieren"), min_payload_bytes 100000 (live 257,477 B; cache-control no-store,
+    no validators - every daily poll is a full GET, ~7.7 MB/month), licence none-analysed,
+    licence_evidence_url https://www.ewe-netz.de/meta/impressum; poll daily (--every P1D). (2) source_id
+    de-dso-netze-bw-grossspeicher, publisher Netze BW GmbH, landing_url
+    https://www.netze-bw.de/stromeinspeisung/stromspeicher-anmelden/grossspeicher, accept_extensions [],
+    expect_landing_text "Anmeldezeitraum", declared_cadence P1Y ("einmal jaehrlich ausgewertet"; window
+    2026-11-01..12-31, first allocation ~2027-03-01), polarity lists_state, min_payload_bytes 15000 (live 20,074 B),
+    licence none-analysed, licence_evidence_url https://www.netze-bw.de/impressum; poll daily. Visible-text diff on
+    both (the chassis already does this for the TSO landing pages). ~2.5 h. Confirm the chassis does not trip
+    small-payload or staleness alarms on a no-store page at P1D against P6M.'
+  not_built:
+    - publisher: MITNETZ STROM (Grossspeicher and Reservierung pages)
+      why: the pages carry reservation RULES (reservation only at Planungsreife; 7 months plus a 3-year extension) and
+        one qualitative sentence added in H1 2026 - no figure, no open/closed state; the merge's URL was a sales page
+        for Mitnetz's own modular storage product; the ~120 GW figure lives only in a dated zfk report (2026-04-09);
+        rules will be promulgated-ish under s.17f EnWG-E
+    - publisher: E.ON-group DSOs (Bayernwerk Netz, Westnetz, Avacon Netz, E.DIS Netz), HanseWerk/SH Netz, TenneT
+      why: Cloudflare managed challenge or no answer to an honest User-Agent (posture recorded 2026-09-05) - browser-only
+        = project, not option; a large share of the 17,775 DSO storage requests sits with them (coverage bias)
+    - publisher: Austrian Power Grid AG (markt.apg.at, the Anschlussantraege-per-Bundesland column)
+      why: handed over from the DSO grid-connection chain as EVIDENCE - a genuine monthly stock series (Einspeisung
+        5,964 -> 27,544 MW, Bezug 4,132 -> 29,889 MW, Sept 2024 -> Aug 2026, six free Wayback editions) - but not
+        screened to verdict here; Austrian law (UrhG AT ss.76c-76e, no commercial TDM exception, browse-wrap
+        commercial-use bar in apg.at Nutzungsbedingungen) needs Austrian counsel first; a dated re-screen if the
+        owner wants a DACH queue board
+  note: Free backfill is exactly the series for EWE (two attested captures, 2025-10-17 "ueber 25 Gigawatt" without the
+    stop sentence; 2026-04-15 "ueber 34 Gigawatt" with it) and thin for Netze BW (three captures, pre-August text).
+    The dated press figures (4-UeNB 2026-02-05, Mitnetz 2026-04-09, Netze BW 2026-08-13, SMARD 2026-08-20) persist
+    at their publishers and seed the wedge; they are not the series.
+stations:
+  s0_refusals:
+    result: PASS
+    tag: HIGH
+    note: Operator-level aggregates; no persons collected or output (the Mitnetz contact person and the Netze BW CEO
+      quote are neither); BESS Germany 1 GmbH cited from a public decision, not tracked; no portal, Vorpruefung or
+      Netzauskunft tool used; derived facts only.
+  s1_archive:
+    result: PASS for EWE and Netze BW; Mitnetz has no state to archive
+    tag: HIGH (reads) / MED (counts)
+    note: 'Probes: Netze BW exit 0 (3 captures 2026-02-08..05-10, LIVE); EWE and Mitnetz exit 3 x3 (CDX preflight) -
+      replaced by direct CDX rows and id_ fetches (EWE 2 captures; Mitnetz Grossspeicher 3), all LIVE; orchestrator
+      re-fetched EWE live and both captures independently. No "Stand", no archive control on any page; EWE press
+      lists render no "Gigawatt" (owner check). No maintained panel: SMARD "unterscheidet bislang nicht", no operator
+      breakdown; Modo Energy research has no per-operator table; vendor trackers surface nothing.'
+  s2a_buyers_now:
+    result: FAIL
+    tag: HIGH
+    note: aurivolt needs the CURRENT reservation state of the operator where a project sits; Roedl & Partner and Raue
+      brief on one figure at a time; BESS Germany 1 is a litigant - three names from poor-recurrence rows.
+  s2b_buyers_later:
+    result: PASS 3/3
+    tag: HIGH
+    note: 'Comparable: GridTracker sells US interconnection-queue history (paid tier) [MED]. Disputed: BK6-25-325
+      (30.03.2026, 18 pp read): petitioner argued the operator "haette zudem Netzdaten zur Verfuegung stellen muessen,
+      die ... eine Ueberpruefung der Ablehnung ... ermoeglicht haetten"; chamber: "aus technischer Sicht plausibel"
+      [HIGH]. Traded: aurivolt 2026-09-03 buys 1-10 MW project rights "gegen eine Einmalzahlung", 300 MW by end-2027
+      [HIGH]. Indicators: SMARD 2026-08-20 (17,775 DSO requests / 406.8 GW in 2025); Netze BW 2026-08-13 (>20 GW HS +
+      2.2 GW MS, >93 % storage); EWE 25 -> 34 GW in six months; BR-Drs. 471/26 ss.17c/17f; BT-Drs. 21/7734 s.17(2c)
+      [HIGH].'
+  s3_churn:
+    result: PASS with the 90-day gate (EWE); PASS thin (Netze BW)
+    tag: HIGH on artefacts, LOW on cadence
+    note: EWE declares no cadence; one overwrite of the figure and two edits of the state text observed across
+      2025-10-17 / 2026-04-15 / 2026-09-06. Netze BW is annual by construction with window dates on the page. A
+      superseded reservation state stays decision-relevant 12-36 months (inferred from the BK6 timeline).
+  s4_licence:
+    result: PASS pending advice
+    tag: MED
+    note: No licence statement on any page or Impressum; Mitnetz's rechtliche Hinweise carry a general copyright
+      notice that carves out statutory uses; robots ewe-netz.de and mitnetz-strom.de 404, netze-bw.de allows the
+      polled paths; no ai.txt/llms.txt/tdmrep on any host (no machine-readable s.44b(3) reservation). One sentence
+      stating the operator's own aggregate is not a database on the obvious reading (ss.87a-87b read). Defence
+      not-a-database + derived facts only + no conflict with exploitation. Lawyer before the UG touches it.
+  s5_withdrawal:
+    result: PASS with four dated mechanisms in the kill criteria
+    tag: HIGH
+    note: 'Subject institutional. Posture: all three hosts answer an honest UA with 200; the E.ON-group DSOs, SH Netz
+      and TenneT are challenge-walled (cannot be covered). Withdrawal in reverse: Directive 2019/944 Art. 31(3) as
+      amended by 2024/1711 (DSOs publish "capacity under connection request" at least quarterly, transposition due
+      2025-01-17, no retention); BR-Drs. 471/26 s.17c map and s.17f joint reservation rules (208 DSOs, IT-supported
+      reservation system) - state could migrate into portals [LOW]; BT-Drs. 21/7734 s.17(2c) website duty for
+      reservations, no archive; BVES 2026-07-22 p.12 asks for anonymised procedure data as s.17a(1) S.5 Nr.8.'
+  s6_validation:
+    result: option mode, register set; wedge not yet offered
+    tag: n/a
+    note: 90-day churn gate to 2026-12-14 (collection start assumed 2026-09-15). Current-demand mode not run.
+future_question: Wie ueberzeichnet war dieser Verteilnetzbetreiber, und nahm er ueberhaupt noch Reservierungen an, als
+  unsere Reservierung, Zusage oder Ablehnung erteilt wurde - und was stand an diesem Tag auf seiner eigenen Seite?
+buyers_now: []
+buyers_later:
+  - type: project-rights buyers and portfolio acquirers in approved or queued BESS
+    evidence: 'aurivolt 2026-09-03: "Weniger als ein Zehntel ... tatsaechlich zugesagt"; buys 1-10 MW project rights
+      against a one-off payment; FAVEOS buys only with a "verbindliche Netzanschlusszusage oder -reservierung";
+      AllianzGI-Kyon EUR 500 M portfolio deal 2026-03-03'
+    tag: HIGH
+  - type: petitioners' counsel in s.31 EnWG / OLG proceedings on refused storage connections
+    evidence: BK6-25-325 (30.03.2026), BK6-25-287 (04.05.2026), BK6-25-512 (06.05.2026)
+    tag: HIGH
+  - type: lenders' and buyers' technical advisers doing diligence on a DSO-connected BESS
+    evidence: GridTracker (US queue history, paid) as the comparable; ECO STOR / Santander / NORD/LB tolling-based
+      financing 2026-06-15
+    tag: MED
+premium:
+  setup_hours: 2.5
+  monthly_eur: 2
+  note: two landing-only HTML pages; EWE no-store means a full 257 KB GET per day (~7.7 MB/month); Netze BW 20 KB
+wedge: A free normalised "DSO Grossspeicher-Warteschlange" board - operator | figure as published | basis | reservation
+  state | deposit rule | first seen | last changed - seeded from today's pages and the persisting dated press figures,
+  with a change alert when any polled sentence changes; offered free to two BESS developers and one energy-law
+  practice. The alert names the operator and the change, never the endpoint or the poll.
+kill_criteria:
+  - EWE, Netze BW or Mitnetz add a "Stand:" date plus an archive or older-versions control; or a statute (the
+    BR-Drs. 471/26 successor text, BT-Drs. 21/7734, the Art. 31(3) transposition) adds a retention or history duty -
+    grep archiv|histori|vorherige Fassung|aufbewahr on every new text
+  - A funded party publishes the same series - SMARD adds a per-operator or per-Land breakdown (re-check the 2027
+    edition ~Aug 2027); BNetzA/VNBdigital gains a capacity-under-request layer; BDEW repeats its survey as a dated
+    per-operator table; BVES's s.17a Nr.8 is enacted with a central publisher
+  - 'The series stops changing: neither the EWE figure or state sentences nor the Netze BW state sentence changes by
+    2026-12-14 (the 90-day gate; Netze BW''s window opening on 2026-11-01 is counted but the EWE figure is the one
+    that matters); thereafter STALE for two consecutive P6M periods on EWE'
+  - Nobody outside the owner has used the board or the alert by the review date (log every refusal with a date)
+  - A 2b indicator reverses - project-rights trading in approved BESS stops, or SMARD 2027 shows DSO requests falling
+    below commitments
+  - A Disallow on the polled paths, a machine-readable TDM reservation, or terms barring automated access on any host
+    - stop polling that host
+  - A host moves behind a Cloudflare challenge - browser-only = project; drop that source
+  - EWE removes the figure or the reservation-stop sentence and publishes nothing dated in its place for two
+    consecutive cycles - the option reduces to Netze BW's shape; re-screen
+review_date: '2027-03-31'
+review_note: 'Brought forward from the twelve-month default by the publisher''s own dated event: Netze BW "Erste
+  Vergabe: voraussichtlich bis zum 1. Maerz 2027" (window 1 Nov-31 Dec 2026), coinciding with the TSO cycle-1 offer
+  phase. Checkpoints: 2026-09-25 Bundesrat first passage; 2026-11-01 Netze BW window opens; 2026-12-14 churn gate.'
+route: portfolio
+ceiling:
+  eur_per_year_low: 12000
+  eur_per_year_high: 72000
+  tag: LOW
+  note: An alert/feed at EUR 100-300/month x 10-20 subscribers on its own; realistically one extra layer inside the
+    Schaltfeld register's alert for the same 50-150 developers, project-rights buyers, law practices and lender
+    advisers - not many-small, not a route to the ambition. Two customers at EUR 150/month clear the floor. Odds the
+    buyer conversation happens ~30 % within twelve months if the board is e-mailed to ten named organisations, ~5 % if
+    only published.
+owner_checks:
+  - 'From the Beelink: archive-probe.mjs probe on the EWE Grossspeicher and Mitnetz Grossspeicher URLs (CDX preflight
+    exit 3 x3 from the container)'
+  - 'EWE press lists (/meta/presse, /ueber-uns/service/pressemitteilung; possibly script-rendered): any dated release
+    carrying "34 Gigawatt" or "25 Gigawatt"?'
+  - 'Mitnetz Download-Center: a "Reservierungsrichtlinie" PDF with a Stand or version would be a rule series, not this
+    candidate'
+  - 'Netze BW without logging in: does any public page show per-region "Punkteverfahren offen/geschlossen" state?
+    In March 2027: did the first Vergabe publish per-region figures?'
+  - 'dip.bundestag.de after 2026-09-25: BR-Drs. 471/26 and BT-Drs. 21/7734 - grep each new text for
+    archiv|histori|vorherige Fassung|aufbewahr and for "beantragte Kapazitaet"'
+  - 'TenneT and the Bayernwerk / SH Netz portals (2026-10-12) from a browser: a queue figure, window date or
+    reservation state without a login would be a browser-only source (project), noted for the s.17c extension'

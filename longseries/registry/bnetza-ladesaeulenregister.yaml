@@ -1,7 +1,7 @@
 # Option register entry (see registry/README.md). Not yet collected; how_to_build shows the no-code path.
 # Evidence: the EV-charging dossier in patterns (linked below). Screen 2026-09-06, skeptic pass recorded there.
 id: bnetza-ladesaeulenregister-monthly
-title: BNetzA Ladesaeulenregister - the monthly per-Ladeeinrichtung file, deleted at each publication (transition record)
+title: BNetzA Ladesaeulenregister - the dated per-Ladeeinrichtung file, superseded editions deleted after a two-to-four-month lag (transition record)
 status: option
 decision: collect
 verdict: OPTION
@@ -16,7 +16,9 @@ history:
     note: 'Prospect chain on EV charging: the headline AFIR dynamic layer is not an option at any fidelity (granted
       channel and project at full fidelity; archived openly by NVBW/MobiData BW at station fidelity); the register
       the owner assumed archived is the thing that vanishes. Screened at all six stations in option mode; 2a FAIL,
-      2b PASS 3/3; churn measured on two editions. Owner has not yet decided to collect.'
+      2b PASS 3/3; churn measured on two editions; skeptic pass confirmed the option and rewrote the deciding fact
+      (deletion lags two to four months; XLSX is the primary artefact; 37.6 % of "vanished" IDs are re-registrations;
+      97 % of one month''s operator changes were a single E.ON rename). Owner has not yet decided to collect.'
 collector:
   built: false
   sources: []
@@ -27,22 +29,33 @@ collector:
     expect_landing_text "Liste der Ladesaeulen"; expect_min_documents 2; declared_cadence P1M (FAQ: "Die Liste wird
     monatlich aktualisiert und steht zum Download zur Verfuegung."); polarity lists_state; min_payload_bytes 300000;
     licence CC-BY-4.0 with licence_evidence_url = the FAQ; poll weekly (--every P7D), conditional GET (ETag and
-    Last-Modified present), generous per-request timeout (the host is slow). Carry ~87 MB/month, ~1 GB/year.
-    Extraction later, remote (no Beelink dependency): utf-8-sig, ";" delimiter, header at the "Ladeeinrichtungs-ID"
-    line, decimal comma in lat/lon; valid-time = "Letzte Aktualisierung vom", transaction-time = download time; diff
-    keyed on Ladeeinrichtungs-ID and EVSE-ID1..6; SUPPRESS operator names that do not match a legal-entity/trade
-    pattern (natural persons emitted as "natuerliche Person (anonymisiert)" at Kreis level). Alerts: landing 404 P0,
-    no new file after 45 days P1, payload < 40 MB P1, header line not found P1. ~3 h.'
+    Last-Modified present), generous per-request timeout (the host is slow). Carry ~85 MB per edition, ~1 GB/year.
+    XLSX FIRST: the June 2026 edition was published as XLSX only (no CSV) - a CSV-only parser misses editions.
+    Extraction later, remote (no Beelink dependency): CSV utf-8-sig, ";" delimiter, header at the
+    "Ladeeinrichtungs-ID" line, decimal comma in lat/lon, plus an openpyxl path for XLSX-only editions; valid-time =
+    "Letzte Aktualisierung vom", transaction-time = download time; diff keyed on Ladeeinrichtungs-ID and EVSE-ID1..6
+    (IDs are not recycled); a coordinate-based re-registration matcher (4 dp ~ 11 m) before any "exit" claim; an
+    operator-rename / intra-group normaliser before any "Betreiberwechsel" claim; SUPPRESS operator names that do not
+    match a legal-entity/trade pattern (natural persons emitted as "natuerliche Person (anonymisiert)" at Kreis
+    level). Every poll: count the dated register URLs on the data host that still answer 200 (the deletion-lag
+    gauge). Alerts: landing 404 P0, no new file after 45 days P1, payload < 25 MB P1, header line not found P1.
+    ~6 h after the skeptic pass (3 h chassis, 3 h parser/matcher/normaliser).'
   not_built:
     - publisher: Bundesnetzagentur, daily "oeffentliche Schnittstelle" (web service)
       why: granted channel - obtained by e-mail with "Voraussetzungen fuer die Nutzung"; PARKED; the monthly file is the
         anonymous public surface and the archive must never depend on the API
     - publisher: Bundesnetzagentur, Ladesaeulenkarte (ArcGIS FeatureServer)
       why: anonymous queries answer "Token Required" (code 499) - walled; owner browser check for date or archive controls
-  note: 'Free backfill before the first capture: Wayback bodies of 2025-07-18, 08-26, 10-23, 12-09 (CSV, complete) and
-    2025-06-17 (XLSX); the 2026-01-28 XLSX capture is truncated at 5 MiB; no capture between 2026-02-12 and 2026-09-01
-    - those editions are lost unless someone else kept them. Schleswig-Holstein open data holds 24 Land subsets
-    2022-02..2024-07 (CC BY 4.0). The 2021-23 generations have a different schema (26 columns, no ID).'
+  note: 'TIME-CRITICAL (dated 2026-09-06): the publisher still serves the superseded editions 2026-06-03 (XLSX only),
+    2026-07-07 and 2026-07-28 (CSV + XLSX); at the observed lag they disappear around October-November 2026 -
+    download them now (nothing enters a repo). The 2026-03-25 and 2026-04-22 editions are already gone and are in
+    no capture. Free backfill: Wayback bodies of ~14 editions 2024-02..2026-01 across four filename generations
+    (e.g. 2025-05-07.csv memento 35.4 MB; 2025-07-18, 08-26, 10-23, 12-09 CSVs complete; the 2026-01-28 XLSX
+    capture truncated at 5 MiB); the Internet Archive captured none of the 2026-03..07 bodies despite >= 60
+    landing-page captures in 2026 - the arithmetic moat is contingent on its crawl behaviour. Schleswig-Holstein open
+    data holds 24 Land subsets 2022-02..2024-07 (CC BY 4.0). The 2021-23 generations have a different schema (26
+    columns, no ID). Attested 2026 editions: 01-28, 03-25, 04-22, 06-03, 07-07, 07-28, 09-01 - no February, May or
+    August edition; "monatlich" is the publisher''s word, the observed cadence is three to eight weeks.'
 stations:
   s0_refusals:
     result: PASS with a binding design constraint
@@ -55,13 +68,17 @@ stations:
   s1_archive:
     result: PASS for the per-point record; KILL for aggregates
     tag: HIGH
-    note: 'Probe exit 0: 11 attested dated files 2025-06-17..2026-01-28, 11 GONE (404); orchestrator HEAD 2026-09-06 on
-      two attested files 404, current file 200. Publisher keeps aggregate history only ("historische Daten seit 2016
-      in quartalsweiser Aufloesung", Ladeinfrastruktur in Zahlen workbook). No funded panel: NVBW/MobiData BW states a
-      monthly bnetza_api intent but 0 rows exist in its history files and datastore (four files and the live datastore
-      checked); NLL cleans a monthly series internally and publishes aggregates; Eco-Movement/Chargeprice/chargecloud
-      keep their own databases. Retention duty: none - LSV s.4 creates a notification record, no publication or
-      retention clause; the published list is courtesy output.'
+    note: 'Probes exit 0: 11 attested dated files 2025-06-17..2026-01-28 all GONE, and on the older SharedDocs prefix
+      10 attested URLs 2024-02..2025-05 all GONE - 21/21 pre-June-2026 URLs across four filename generations; BUT the
+      June and July 2026 editions are still LIVE (skeptic HEAD 2026-09-06): deletion lags two to four months, the
+      FAQ''s "Loeschung" sentence is about charge points, not files. Orchestrator HEAD 2026-09-06 on two attested
+      files 404, current file 200. Publisher keeps aggregate history only ("Historische Entwicklung" sheets since
+      2016, Ladeinfrastruktur in Zahlen workbook). No funded panel: NVBW/MobiData BW states a monthly bnetza_api
+      intent but 0 rows exist in its history files (incl. the ingest day 2026-08-18) and datastore; the one academic
+      crawler (open-energy-data-server) is download-once with if_exists=replace; NLL cleans a monthly series
+      internally and publishes aggregates; Eco-Movement/Chargeprice/chargecloud keep their own databases. Retention
+      duty: none - LSV of 23.12.2025 ss.1-6 read in full (s.6 is a monthly transmission to the Eichbehoerden) and
+      EnWG s.49(4) Nr.2e/2a carry transmission duties only; the published list is courtesy output.'
   s2a_buyers_now:
     result: FAIL
     tag: HIGH
@@ -80,10 +97,13 @@ stations:
   s3_churn:
     result: PASS (measured)
     tag: HIGH
-    note: 'Declared monthly (FAQ). Measured 2025-12-09 -> 2026-09-01: 4,378 Ladeeinrichtungen vanished (~501/month),
-      19,620 added (~2,247/month, 3,312 of them with pre-2025 commissioning dates), among 96,823 persisted IDs 5,346
-      operator changes (~612/month), 1,495 public-key changes (~171/month), 2,880 EVSE-ID changes. No decommissioned
-      status exists in the file (In Betrieb 116,423 / In Wartung 20) - removal is deletion.'
+    note: 'Declared monthly (FAQ); observed three to eight weeks. Measured 2025-12-09 -> 2026-09-01: 4,378
+      Ladeeinrichtungen vanished, of which 1,644 (37.6 %) have a new ID at the same coordinates (876 same operator) -
+      re-registrations; true exits ~2,700 over 8.7 months (~2.7 %), at month scale 248 and 799 per interval; 19,620
+      added (3,312 with pre-2025 commissioning dates); the 5,346 "operator changes" are rename-dominated (3,181 of
+      3,275 in one interval = E.ON Drive GmbH -> E.ON Drive Germany GmbH; true transfers an order of magnitude rarer
+      and lumpy); public-key changes 86-97 per interval; EVSE-ID changes 2,880. IDs are not recycled. No
+      decommissioned status exists in the file (In Betrieb 116,423 / In Wartung 20) - removal is deletion.'
   s4_licence:
     result: PASS (lookup)
     tag: HIGH
@@ -94,10 +114,13 @@ stations:
   s5_withdrawal:
     result: PASS with kill criteria
     tag: HIGH
-    note: 'Publisher invites re-use of the monthly file; the map API is token-walled and the new daily interface is keyed
-      - the file could be retired behind the API (undated). Withdrawal in reverse: NVBW monthly bnetza_api intent
-      (0 rows today, station level), NLL dashboard extensions, BNetzA''s own aggregate history since 2016. Publicity is
-      not a risk: the licence requires naming the source.'
+    note: 'Publisher invites re-use of the file; the map API is token-walled and the daily interface is e-mail-gated
+      (the gate covers the "oeffentliche Schnittstelle" too) - the file could be retired behind the API (undated).
+      Superseded files persist two to four months - housekeeping, not hostility. Withdrawal in reverse: NVBW monthly
+      bnetza_api intent (0 rows seven months on), NLL dashboard extensions, BNetzA''s own aggregate history since 2016;
+      the Internet Archive''s crawl decides how much of the past a rival can backfill. Publicity is not a risk: the
+      licence requires naming the source. Because the last two to four editions stay live, the wedge (a last-two-files
+      change table) has no exclusivity - only history older than ~4 months is exclusive.'
   s6_validation:
     result: option mode, register set; wedge not yet offered
     tag: n/a
@@ -123,9 +146,10 @@ buyers_later:
     evidence: ~170 public-key changes per month measured
     tag: LOW
 premium:
-  setup_hours: 3
+  setup_hours: 6
   monthly_eur: 1
-  note: ~87 MB/month raw (CSV + XLSX + workbook), ~1 GB/year; extraction is plain CSV and runs remote
+  note: ~85 MB per edition (CSV + XLSX + workbook), ~1 GB/year; 3 h chassis plus 3 h for the XLSX parser, the
+    re-registration matcher and the rename normaliser (skeptic); extraction runs remote
 wedge: A monthly "Register-Aenderungen" table and alert per Landkreis and per legal-entity operator (new points,
   withdrawn points, operator changes, power upgrades, public-key rotations) computed from the last two files, cited
   to bundesnetzagentur.de; offered free to two or three people near the future buyer (a consolidator's corporate
@@ -141,9 +165,22 @@ kill_criteria:
   - The consolidation indicator reverses - no German CPO portfolio transaction in twelve months
   - A schema change drops Ladeeinrichtungs-ID without a mapping
   - A MobiData BW daily file contains bnetza_api rows at EVSE level (check one file per quarter)
+  - The deletion lag grows to twelve months or more (twelve dated editions live at once on the data host - measured
+    every poll) - the publisher is effectively archiving; re-run station 1 and close unless the wedge has users
+  - The Internet Archive captures ten or more of twelve edition bodies in a rolling year (CDX on the data host) - the
+    arithmetic moat is nil; collect at hosting cost only, no product claim on exclusivity
+  - The re-registration share exceeds 50 % of vanished IDs in any twelve-month window (same-coordinate match) - the
+    "exit" series is ID churn; re-describe the product or close
+  - A single legal-entity rename exceeding 80 % of a month's operator changes is aggregated as one event (design
+    rule); if true transfers stay below ~20 per month for six months, drop the Betreiberwechsel sub-signal
+  - Three consecutive editions without a refreshed CSV - XLSX-first parser (design); no refreshed XLSX for two
+    editions - series ended
+  - An anonymous keyless OpenAPI endpoint appears on the "oeffentliche Schnittstelle" - add it as a second source,
+    never a dependency; the monthly file retired while the API stays keyed - kill
 review_date: '2027-09-06'
-review_note: 'Twelve months. Interim station-1 re-check 2027-03-01: NVBW bnetza_api rows; chargecloud Hub "Analyze" as a
-  competing history product; NLL dashboard scope.'
+review_note: 'Twelve months. Interim check brought forward to 2027-01-31 (skeptic): after chargecloud Hub "Analyze"
+  (announced for Q4 2026) and after four polls have measured the deletion lag, the format-skip pattern and NVBW''s
+  bnetza_api rows; second interim 2027-03-01 on NLL dashboard scope.'
 route: portfolio
 ceiling:
   eur_per_year_low: 24000
@@ -162,3 +199,5 @@ owner_checks:
   - 'Mobilithek terms of use (client-rendered) - needed before any Mobilithek-sourced series, including the tariff
     residue re-open'
   - 'Whether to e-mail ladesaeulenregister@bnetza.de for the daily interface description (granted channel, optional)'
+  - 'NOW: download Ladesaeulenregister_BNetzA_2026-06-03.xlsx, _2026-07-07.xlsx and _2026-07-28.xlsx (and the two
+    July CSVs) from the publisher before they are deleted (expected October-November 2026); keep them outside any repo'

@@ -1,0 +1,220 @@
+# Option register entry (see registry/README.md). Not yet collected; how_to_build shows the no-code path.
+# Evidence: the data-centre siting dossier in patterns (linked below). Screens 2026-09-06 (family; wesernetz Bremen
+# separately), skeptic passes recorded there. Co-owned by the DSO grid-connection chain: one collector for these pages.
+id: dso-allocation-rounds
+title: German DSO large-load allocation rounds (Repartierung / Pro-Rata) - the per-round published capacity per grid area
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-06'
+screened_with: vanishing-data-prospector v2 (Prospect chain on data-centre siting, load side), workflow-tools/patterns@claude/vanishing-data-prospector-setup-e37mz6
+dossiers:
+  - https://github.com/workflow-tools/patterns/blob/claude/vanishing-data-prospector-setup-e37mz6/docs/research/2026-09-06-vanishing-data-prospect-data-centre-siting.md
+  - https://github.com/workflow-tools/patterns/blob/claude/vanishing-data-prospector-setup-e37mz6/docs/research/2026-09-06-vanishing-data-prospect-dso-grid-connection.md
+history:
+  - date: '2026-09-06'
+    status: option
+    note: 'Prospect chain on data-centre siting: water, land and siting-moment statements are uncollected, not vanishing;
+      the one load-side availability figure published in Germany is the DSO allocation round, overwritten when the
+      round closes. Family screened in option mode (2a FAIL, 2b PASS), wesernetz Bremen screened on its own; Hamburg
+      parked (host blocks cloud egress); Netze BW killed as a capacity series. Owner has not yet decided to collect.'
+collector:
+  built: false
+  sources: []
+  how_to_build: 'Four landing-only sources on the chassis, ~7 h in total, ~EUR 3/month, payload < 3 MB per edition.
+    (1) source_id de-dso-stromnetz-berlin-repartierung, publisher Stromnetz Berlin GmbH, landing_url
+    https://www.stromnetz.berlin/anschliessen/anschluss-mittel-hochspannung/repartierung/ (EN mirror
+    /en/connecting/medium-and-high-voltage/allocation-procedure/), accept_extensions [".pdf"] PLUS a small chassis
+    extension to capture <img> PNGs under /images/<uuid>/ta-l/ and /sp/ (the Topogramm and legend are images, not
+    links; both carry real last-modified and etag, so conditional GET works; the PDFs under
+    /files/globalassets/dokumente/Repartierungsverfahren/ return last-modified = fetch time), expect_landing_text
+    "Repartierungsverfahren", declared_cadence P1Y (Teilnahmebedingungen 1.d "bis zum fuenfzehnten Werktag im April
+    eines jeden Jahres"; 2026 edition suspended, "voraussichtlich am Mitte Oktober 2026"), polarity lists_state (all
+    seven Netzgebiete, zeros included), min_payload_bytes 20000; fetcher must accept brotli or ask for gzip. Legend
+    read by eye once a year (six values), or later by a vision model on the Beelink. (2) source_id
+    de-dso-wwn-repartierung, publisher Westfalen Weser Netz GmbH, landing_url
+    https://www.ww-netz.com/netzanschluss/ihr-netzanschluss/netzanschluss-ueber-1-mw, accept_extensions [".pdf",
+    ".xlsx"], expect_landing_text "Repartierbare Leistung", expect_min_documents 3, declared_cadence P6M
+    (Teilnahmebedingungen "zunaechst zweimal jaehrlich", figures "bis spaetestens 6 Wochen vor dem Stichtag"), polarity
+    lists_state (eight Netzgruppen, "O" for zero), min_payload_bytes 50000; the table is page text - a regex. (3)
+    source_id de-dso-nrm-pro-rata, publisher NRM Netzdienste Rhein-Main GmbH, landing_url
+    https://www.nrm-netzdienste.de/de/netzanschluss/pro-rata-verfahren-strom, accept_extensions [] (the PDFs are
+    forms), expect_landing_text "Pro-Rata-Verfahren", declared_cadence P1Y (window 01.02.2026-31.01.2027, results
+    "ab dem 15.04.2027 ... schriftlich"), polarity lists_where_not_possible (the page names the rationed nodes),
+    min_payload_bytes 100000, no-store headers so daily poll with content hash; the derived layer is a PARAPHRASED
+    state table (node | rationed | threshold | window), never quoted text. (4) source_id de-dso-wesernetz-repartierung,
+    publisher wesernetz Bremen GmbH, landing_url https://www.wesernetz.de/fuer-bauende/grossanlagen-netzanschluss/neu-netzanschluss-grossanlagen/repartierungsverfahren,
+    accept_extensions [".pdf"], expect_landing_text "Ergebnis nach Zuteilungsperiode", expect_min_documents 1,
+    declared_cadence P1Y (Teilnahmebedingungen s.1 A/C "einmal jaehrlich", "spaetestens bis zum 1.11."; s.2 A Stichtag
+    15.12.), polarity lists_state, min_payload_bytes 10000, no validators - content hash; the PDFs (Teilnahmebedingungen,
+    Netzausbauplan draft) stay bronze-only. Hosting: capture on the VPS or scheduled runner (must survive relocation);
+    the two-clock design (edition vs observed_at) is load-bearing at annual cadence. All images and PDFs stay in the
+    bronze layer and are never redistributed; the derived product is the dated table of figures per grid area.'
+  not_built:
+    - publisher: Hamburger Energienetze GmbH ("Fair Grid" Repartierung > 1.5 MVA from H2 2026)
+      why: the host blocks the container's egress IP with a FortiWeb "Web Page Blocked" page (HTTP 500 to both an honest
+        and a browser User-Agent; the block is on the IP, not the UA); no Wayback capture of any Netzanschluss URL; a
+        collector cannot read it from a cloud host - owner browser check first; if readable from the VPS it joins the
+        family as a fifth landing-only source (~1 h)
+    - publisher: Netze BW GmbH (annual Punkteverfahren, window 2026-11-01..12-31)
+      why: killed as a capacity series - no figure or region list on the page, the news page or the two PDFs;
+        submissions run through a login portal; a page-state watch only, carried by the storage-queue register
+        (dso-storage-queue-register)
+    - publisher: wesernetz Bremen - the pre-round "ermittelte verfuegbare Netzanschlusskapazitaet" inside the Netzportal
+      why: a Simplifier / SAP-UI5 JavaScript shell with anonymous-login tokens (hausanschluss.wesernetz.de, productId=40);
+        the publisher can switch it off with one setting - a lease and a project, not an option; PARKED pending an
+        owner browser check (deadline for the 2027 figure 2026-11-01)
+    - publisher: Bayernwerk Netz, SH Netz, E.DIS, Westnetz, Avacon, Syna (comparable rounds and portals)
+      why: Cloudflare managed challenge to every non-browser client (posture recorded 2026-09-05) - browser-only =
+        project, not option
+  note: 'Free backfill: Berlin only - the 2025 legend and Topogramm PNGs are LIVE unlinked at their attested /images/
+    paths (captured 2026-01-04 in eight variants) and 19 page states 2024-10..2026-08 sit in Wayback; WWN''s 01/2026
+    column is in no capture; NRM, Netze BW and wesernetz have one capture each. The publishers'' FAQs are near-verbatim
+    copies of one template ("Eine vorzeitige Prognose ist nicht moeglich. Fuer aktuelle Informationen empfiehlt sich
+    ein regelmaessiger Blick auf die Webseite.").'
+stations:
+  s0_refusals:
+    result: PASS
+    tag: HIGH
+    note: Subjects are Netzgebiete, Netzgruppen and Netzknoten; petitioners are never named by the publishers; the OLG
+      appellant is unnamed in every source read; the map and legend images are copyrighted and never redistributed -
+      only the figures read off them; no portal, form or mailto touched.
+  s1_archive:
+    result: PASS for Berlin, WWN, wesernetz; thin for NRM; CANNOT RATE for Hamburg; n/a for Netze BW
+    tag: HIGH (live re-fetches, Wayback bodies) / MED (counts, absences)
+    note: 'Probes exit 0 after CDX-preflight retries: Berlin 19 captures 2024-10-13..2026-08-29, 19 versions, LIVE;
+      WWN 3 captures, none with a table; NRM 1; Netze BW 1; Hamburg exit 3 x3. Wayback bodies: Berlin 2025-05-23 holds
+      the "Zusammenstellung" with legend and Topogramm, 2026-08-29 equals the live page (no figure) - overwrite
+      verified; orchestrator HEAD 2026-09-06 on the 2025 Topogramm: 200, 96,830 B, Last-Modified 2025-04-09. No
+      publisher archive (Berlin''s only "Archiv" is the Netzverlustenergie tender archive; WWN has no robots file; NRM
+      no-store). Retention duty: none in any page, Teilnahmebedingungen or the VfEW paper; Art. 31(3) Dir. 2019/944
+      and s.17c EnWG-E are publication duties without retention. No maintained panel found (VNBdigital, Capacitypedia,
+      SMARD, evu+/edna, datacentermap/baxtel checked; trade press writes each round from these pages and keeps no
+      table).'
+  s2a_buyers_now:
+    result: FAIL
+    tag: HIGH
+    note: The OLG appellant (unnamed; litigators are a poor-recurrence row); DC developers decide on the CURRENT
+      allocation and their own application; the law firms writing the commentary read the pages and pay nobody;
+      journalists; JLL/CBRE quote market-level MW; aurivolt needs current allocations.
+  s2b_buyers_later:
+    result: PASS (two of three HIGH, comparable MED)
+    tag: HIGH
+    note: 'Comparable: PVcase Prospect sells developers a consolidated CURRENT view of injection/offtake capacity and
+      POIs; no product sells DSO-round history anywhere [MED]. Disputed: BNetzA BK6-25-122 (26.05.2025) under appeal
+      at OLG Duesseldorf VI-5 Kart 4/26 [V], hearing 08.10.2026; "viele Anschlusspetenten leer ausgegangen"
+      (recht-energisch 2026-06-12) [HIGH]. Traded: VfEW/Netze BW paper - "Das Windhund-Prinzip hat zu einem Entstehen
+      von Sekundaermaerkten fuer Netzanschlusskapazitaeten gefuehrt"; aurivolt project-rights purchases [HIGH/MED].
+      Indicators: Berlin 365 MVA vs ~2,300 MVA requested, 20 contracts incl. 11 data centres; WWN Stichtage 31.01 and
+      31.07.2026; wesernetz 17 requests / 315 MW / 75 MW; NRM restrictions "bis Mitte der 2030er Jahre"; Hamburg from
+      H2 2026; Netze BW window 01.11-31.12.2026 against >20 GW; s.17c(1) EnWG-E in the cabinet draft of 29.07.2026
+      [HIGH].'
+  s3_churn:
+    result: PASS with a churn gate
+    tag: HIGH on declarations, LOW on observed cadence
+    note: Declared P1Y (Berlin, NRM, wesernetz, Netze BW) and P6M (WWN); exactly one figure-bearing edition per
+      publisher observed so far. Durability - the 2025 Berlin figure is the object of a live appeal eighteen months
+      on; the pro-rata rule makes the published figure per Netzgebiet the arithmetic basis of every contract in the
+      round; remainders roll into the next period.
+  s4_licence:
+    result: PASS on derived facts only; PENDING ADVICE before the UG touches it
+    tag: HIGH on the texts, MED on the application
+    note: 'No licence on any site. DNG ss.1-6 read - s.4(2) limits re-use of Daseinsvorsorge undertakings'' data to what
+      they permit; no re-use right here. robots: Berlin /cdn-cgi/, NRM /resources/epaper/, Netze BW /api/, WWN none,
+      Hamburg unreadable; no TDM reservation. Terms: Berlin''s Impressum bars copying material commercially (reaches
+      the images, not a figure); NRM''s bars reproducing texts and data (derived layer = paraphrased state table,
+      never quotes). ss.87a-87b: seven or eight figures per round are not a substantial investment in obtaining; one
+      poll a day extracting <= 8 figures from pages the publishers overwrite and never exploit as history - the
+      load-bearing argument, documented per source. s.44b: lawful access, no reservation. Defence derived-facts-only +
+      not-a-database + no-conflict-with-exploitation.'
+  s5_withdrawal:
+    result: PASS with three withdrawal-in-reverse vectors and one court vector
+    tag: HIGH
+    note: 'Posture: Hamburg blocks cloud egress (FortiWeb); WWN behind Imperva (200 today); Berlin Cloudflare for e-mail
+      obfuscation only; Netze BW process in a login portal; NRM no-store; precedent Energie-Atlas Bayern layers
+      withdrawn "aus Sicherheitsgruenden". Withdrawal in reverse: (1) s.17c EnWG-E publication duty - a BNetzA
+      Festlegung fixing a standard format could add history at a stroke, as Austria''s VNEP-V s.11 did; (2) the VfEW
+      template could bring a Land-level publication; (3) the OLG could strike the Berlin procedure (the 2025 state
+      becomes more valuable as evidence and the series ends) or uphold it (the model "koennte Schule machen").
+      Mitigations: one poll a day per landing page, conditional GET where an etag exists, honest UA with contact,
+      endpoints never linked from the wedge.'
+  s6_validation:
+    result: option mode, register set; wedge not yet offered
+    tag: n/a
+    note: Current-demand mode not run; no contact made this run (refusal).
+future_question: Was stand fuer unser Netzgebiet als zu verteilende Kapazitaet in der Runde, in der wir angefragt haben -
+  und in den Runden davor und danach - und wie ist unsere Teilzuteilung daraus berechnet worden?
+buyers_now: []
+buyers_later:
+  - type: data-centre and BESS developers with sites in Berlin, OWL / Weser-Ems, Bremen or Frankfurt, and their advisers
+    evidence: 'Berlin round 1: 70 requests / ~2,300 MVA against 365 MVA, 20 contracts incl. 11 data centres; wesernetz
+      17 / 315 MW / 75 MW; NorthC buying a Neu-Isenburg parcel with "4,5 Megawatt Netzanschluss" (2026-02-17)'
+    tag: HIGH
+  - type: counsel and expert witnesses in Repartierung disputes (BNetzA s.31 EnWG; OLG Duesseldorf)
+    evidence: BK6-25-122 under appeal, VI-5 Kart 4/26 [V], hearing 2026-10-08; Raue, re Rechtsanwaelte, Noerr, GOERG
+      commentary
+    tag: HIGH
+  - type: acquirers, lenders and rating analysts on a "powered" site or a stabilised campus
+    evidence: 'JLL 2026-04-17 connection times "bis zu 13 Jahre"; Mainova WebHouse CEO on the value of a
+      Netzanschlusszusage; CRA Insights Dec 2025 on grid-connection delay as ABS risk; no lender artefact naming the
+      DSO round yet'
+    tag: MED
+  - type: siting-data vendors (PVcase Prospect, datacenterHawk, JLL research) as an OEM licensee
+    evidence: PVcase Prospect sells a consolidated current view of capacity and POIs; none sells DSO-round history
+    tag: LOW
+premium:
+  setup_hours: 7
+  monthly_eur: 3
+  note: Berlin 2 h (incl. the <img> chassis extension), WWN 2 h, NRM 1 h, wesernetz 1 h, Netze BW watch 1 h; Hamburg
+    excluded (browser-only host); payload < 3 MB per edition; legend read by eye once a year
+wedge: 'A public "Grossanschluss-Rationierungsmonitor" - one dated table across the family (DSO | threshold | grid area
+  | published MW/MVA this round | window or Stichtag | status open / allocated / postponed | last change) with a change
+  alert when any page changes (new round, figure published, Stichtag set, postponement); needs no archive; offered free
+  to a DC/BESS site scout, one of the law firms writing the commentary and one trade journalist. The table names the
+  publisher and the figure, never the endpoint or the poll.'
+kill_criteria:
+  - s.17c EnWG-E enacted with a BNetzA-standardised format that carries history, or VNBdigital / netztransparenz.de /
+    BNetzA publishes a DSO allocation register with prior rounds (withdrawal in reverse)
+  - Any publisher adds a history or version control (a Berlin "Archiv"; WWN keeps prior Stichtag columns beside the
+    new one; wesernetz appends the next result below the last instead of replacing it - then drop that source from
+    collection and keep it in the table)
+  - OLG Duesseldorf strikes the Repartierung down (VI-5 Kart 4/26 [V]) and Berlin ends the series with no successor
+    publication by 2027-04-30 - stop collecting, keep the 2025 archive
+  - 'Churn gate: no second figure-bearing edition observed anywhere in the family by 2027-01-31 (Berlin mid-October
+    2026, WWN''s next pre-Stichtag publication, wesernetz by 2026-11-01)'
+  - Fewer than three DSOs publishing a per-round figure by 2027-09-06 - downgrade the family to validation-only
+  - Nobody has used the wedge by 2027-09-06 (every refusal logged with a date)
+  - A funded party publishes the same cross-DSO table
+  - A machine-readable TDM reservation or a terms change on any host - stop polling that host
+  - A leading indicator reverses - a publisher returns to Windhund, or the rounds are oversubscribed no longer
+review_date: '2026-10-15'
+review_note: 'One week after the OLG Duesseldorf hearing of 2026-10-08: does Berlin publish its mid-October 2026 figures,
+  at the same image paths or new ones? Then family checkpoints - WWN''s next pre-Stichtag publication (six weeks
+  before whichever Stichtag is announced), Netze BW window 2026-11-01, wesernetz Stichtag 2026-12-15 (result
+  replace-or-append by 2027-03-01), NRM results 2027-04-15; churn gate 2027-01-31; full re-run of stations 1, 2b and 5
+  on 2027-09-06.'
+route: validation-only
+ceiling:
+  eur_per_year_low: 6000
+  eur_per_year_high: 50000
+  tag: LOW
+  note: 5-10 monitor subscribers at EUR 100-300/month plus at most one OEM licence to a siting-data vendor at EUR
+    10-30k/yr; about EUR 50k/yr if everything works, one-hundredth of the ambition; a validation unit on the portfolio
+    path and a set of rows the portfolio's DC-siting table needs anyway. Floor - two subscribers at EUR 150/month.
+    Odds - a wedge conversation within twelve months about one in three if ten named e-mails are sent, under one in
+    ten if not; a history-buying conversation about one in six within 24 months, concentrated on the OLG decision and
+    the parliamentary fate of s.17c, either of which can also end the series.
+owner_checks:
+  - 'Hamburger Energienetze from a browser: find the Fair Grid / Repartierung page - is a capacity figure or Stichtag
+    published, in what form? Then run archive-probe on it from the laptop (the container is IP-blocked)'
+  - 'WWN after the next Stichtag is announced: is the "07/2026" column replaced or kept beside the new one? (decides
+    whether the table vanishes)'
+  - 'Stromnetz Berlin after 2026-10-08: does the "Zusammenstellung" with legend and Topogramm reappear, at the same
+    /images/ paths or new ones? Any "Archiv" or year selector a non-browser client does not see?'
+  - 'wesernetz Netzportal (hausanschluss.wesernetz.de, productId=40) without registering: is the 2027 pre-round figure
+    shown anonymously once published (deadline 2026-11-01), and which JSON does the app load (DevTools -> Network)?
+    Between 2027-01-15 and 2027-03-01: does the 2026/27 result replace or sit beside the 2025/26 block?'
+  - 'Netze BW after 2026-11-01: does any public page list the regions opened for the Punkteverfahren or the MW on
+    offer outside the Kundenportal? If yes, the row reopens as a capacity series'
+  - 'Bayernwerk / SH Netz portals (2026-10-12): comparable round figures? Browser-only either way - project, not option'
+  - 'swb.de press list with the 2026 year filter: any release carrying "17 Anschlussanfragen" / "315 MW" / "75 MW"?'

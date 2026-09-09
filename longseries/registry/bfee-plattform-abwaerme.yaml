@@ -1,0 +1,178 @@
+# Option register entry (see registry/README.md). Not yet collected; how_to_build shows the path (one landing-only
+# source plus a small paginator extension). Evidence: the data-centre siting dossier in patterns (linked below), where
+# the screen and skeptic are recorded. Owned by the heat-planning market (not taken to link 2 this session); the
+# data-centre subset (0.9 % of rows) is a view, not a series of its own.
+id: bfee-plattform-abwaerme
+title: BfEE Plattform fuer Abwaerme - the public site-level waste-heat table (s.17 EnEfG), overwritten in place, plus the ZVI daily view
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-06'
+screened_with: vanishing-data-prospector v2 (found by the data-centre siting Prospect chain; screened as a heat-planning candidate), workflow-tools/patterns@claude/vanishing-data-prospector-setup-e37mz6
+dossiers:
+  - https://github.com/workflow-tools/patterns/blob/claude/vanishing-data-prospector-setup-e37mz6/docs/research/2026-09-06-vanishing-data-prospect-data-centre-siting.md
+history:
+  - date: '2026-09-06'
+    status: option
+    note: 'Collect now (personally, non-commercially while the licence is lawyered), productize later. Decided at station
+      2b (narrow pass) with station 4 = PENDING ADVICE gating any commercial product: the XLSX carries "This work is
+      licensed under CC BY-NC 4.0" while DNG s.4(1) says statutorily published data may be used for any purpose - a
+      lawyer''s question. Owner has not yet decided to collect.'
+collector:
+  built: false
+  sources: []
+  how_to_build: 'Source 1 (landing-only, ~2 h): source_id de-bfee-pfa-xlsx, publisher Bundesstelle fuer Energieeffizienz
+    (BAFA), landing_url https://www.bfee-online.de/SharedDocs/Downloads/BfEE/DE/Effizienzpolitik/pfa_datentabelle_excel.html?nn=1616544,
+    accept_extensions [".xlsx"] (the file URL carries ?__blob=publicationFile&v=N - the adapter matches the path; the
+    v= is a cache counter, content-addressed storage de-duplicates identical bytes), expect_landing_text "Datentabelle",
+    expect_min_documents 1, declared_cadence P1M (BfEE: "etwa alle vier Wochen"; observed monthly in 2025, quarterly in
+    2026; the post-31-March edition is the year''s largest churn), polarity lists_state, min_payload_bytes 1000000,
+    licence CC-BY-NC-4.0 with licence_evidence_url = the landing page; GET only with If-None-Match (the Airlock WAF
+    answers HEAD with 303 to an error page). PERSONAL DATA: strip the three contact columns (E-Mail, Telefon, Weitere
+    Hinweise) at ingest; bronze holds a scrubbed copy plus the SHA-256 of the original bytes, never the original - a
+    deliberate deviation from the store-every-byte rule. Extraction (~1 day): openpyxl, key Unternehmens-ID +
+    Melde-ID (present since the 02.09.2025 edition), diff of kWh/a, kW, deg C, availability per potential. Source 2
+    (a small chassis extension, ~0.5-1 day): source_id de-bfee-pfa-zvi, the anonymous JSON endpoint
+    https://elan1.bafa.bund.de/zvi-api/pfa/abwaermepotenziale?seite=N&anzahl=100 (page cap 100; 243 GETs per full
+    pull; contact fields already "Redacted"; 40-key records, no dates, no IDs - uuid persistence untested); poll
+    total and page 0 daily, full pull weekly, under a 90-day churn gate. ~2 days once, ~EUR 2/month (~60 MB/yr XLSX
+    plus ~1.1 GB/yr JSON uncompressed).'
+  not_built:
+    - publisher: BfEE - the Datawrapper map behind the landing page
+      why: the lightbox exposes only a PNG teaser; if a live chart id exists in the browser DOM, its dataset.csv
+        versions would be a small publisher-side aggregate archive (owner browser check)
+  note: 'Free backfill: two Wayback XLSX editions (2025-10-31 = Stand 06.10.2025, 25,893 rows, 244 TWh; 2026-01-27 =
+    Stand 06.01.2026, 26,203 rows, 254 TWh) plus the live file (Stand 05.07.2026, 23,936 rows, 207 TWh) - a
+    three-point series; editions before September 2025 have no IDs and are in no capture. Measured churn: Oct 2025 ->
+    Jan 2026 +544 / -248 potentials, 172 value changes; Jan -> Jul 2026 +4,172 / -6,460 potentials, 5,441 of 19,572
+    common potentials changed, 253 -> 207 TWh/a. The data-centre subset: 218 rows / 93 companies (Hetzner 26, DEW21
+    16, EDEKA IT 8, R-KOM 8, Vantage 6 ...), Jan -> Jul 2026 -26 / +15.'
+stations:
+  s0_refusals:
+    result: PASS with three binding constraints
+    tag: HIGH
+    note: Never a s.17 Meldung or a s.11(3) Nachweis (no compliance document); contact columns dropped at ingest (~699
+      firstname.lastname addresses and mobile numbers in the file); a removed listing is published as a neutral
+      site-level fact or a Landkreis aggregate, never framed as closure or insolvency, and site-level removals go only
+      to vetted buyers; the reporting portal (login) untouched.
+  s1_archive:
+    result: PASS
+    tag: HIGH
+    note: 'Publisher''s own words: "aeltere Daten werden durch die Aktualisierung der Meldedaten ueberschrieben"
+      (Verwaltungsdaten-Informationsplattform, register 1247); s.17(2) EnEfG is a current-state duty; Merkblatt v1.6
+      keeps only the current version of its own documents and a Leermeldung removes a company. No Archiv, no date
+      filter; the ZVI bundle has no history or export route. Probes exit 0 after CDX retries; "MOVED" x6 is the WAF
+      answering HEAD with 303 while GET returns 200. Exactly two XLSX captures in Wayback. No maintained panel
+      (greenventory cites totals for marketing; IZES presented the platform; no Zenodo/GitHub editions).'
+  s2a_buyers_now:
+    result: FAIL
+    tag: HIGH
+    note: greenventory (heat-planning software) loads the current view free; municipal planning bodies keep their own
+      copy of a plan's inputs; heat-network operators in BEW studies choose sources at decision time - nobody needs
+      the past today.
+  s2b_buyers_later:
+    result: PASS (narrow - comparable MED by adjacency, dispute question MED with no dated instance, indicators HIGH)
+    tag: MED
+    note: 'Comparable: GridTracker''s dated queue series (adjacent domain); no product sells a dated heat-source series.
+      Disputed/underwritten shape: BEW-financed networks sized on a listed source that later shrinks; data-centre
+      transactions where offtake is part of the asset (EnEfG s.11(2) reuse quotas 10/15/20 % from 2026-07-01;
+      s.11(3) Nr.3 exemption) - no dated instance of a dispute over a PfA listing found. Indicators: WPG s.4(2)
+      deadlines 2026-06-30 and 2028-06-30; s.11(2) quotas from 2026-07-01; platform growth 20,192 -> 26,203 potentials
+      in eleven months then 23,936 public after plausibility checks; the ZVI daily view launched Nov 2025; a 2026
+      evaluation planned [HIGH].'
+  s3_churn:
+    result: PASS
+    tag: HIGH
+    note: 'Declared "etwa alle vier Wochen" (BfEE PDF, Datenstand 02.11.2025); ZVI "tagesaktuell"; upstream annual by
+      31 March plus "unverzueglich" above 10 % / 80 MWh. Eleven publisher-dated editions in eighteen months (monthly
+      2025, quarterly 2026). Measured churn above. Durability: the life of a heat plan (WPG s.25, s.14(5)) and of a
+      network build - years.'
+  s4_licence:
+    result: PASS for non-commercial collection and retention; PENDING ADVICE for any commercial product
+    tag: HIGH on the texts
+    note: 'CC BY-NC 4.0 inside the XLSX (all three editions; Section 4 grants extraction, reuse and retention for
+      non-commercial purposes); FAQ "nur unverfaelscht" and "wissenschaftliche Zwecke ... Ja"; site texts CC BY-ND
+      3.0 DE; robots none on either host; the ZVI shell noindex,nofollow (an indexing directive). DNG ss.1-4, 8 read:
+      s.2(1) Nr.2 covers statutorily provided data, s.4(1) any purpose, s.4(3) licences must be objective and
+      non-distorting and public bodies "sollen nach Moeglichkeit offene Lizenzen verwenden"; s.1(2) creates no access
+      right; s.2(3) excludes personal data. The NC clause sits in visible tension with DNG s.4 - a lawyer''s question;
+      a relicensing request to the BfEE is the cheap route. ss.87a-87b if NC does not cover the product: the BfEE is
+      probably a database maker; a monthly full-file diff is exactly s.87b(1) S.2 [LOW]. Lawyer before any euro
+      changes hands, even in the Einzelunternehmen.'
+  s5_withdrawal:
+    result: PASS with priced risks
+    tag: MED
+    note: 'Companies can request non-publication (Merkblatt ch. 8; s.17(3)) and do - public total 254 -> 207 TWh/a
+      Jan -> Jul 2026; withdrawn site-level values are never republished. Publisher withdrawal: the statutory duty
+      makes stopping unlikely; the risk is format (the promised CSV never came; the ZVI is now the daily channel; the
+      API could gain a key). Withdrawal in reverse: the BfEE already tracks its own change (IDs, a Feb-2025 webinar
+      comparing editions, periodic Datenueberblick PDFs); DNG s.8 requires dynamic data via API; a 2026 evaluation is
+      planned - a "Historie" download or a GovData listing with dated editions is a realistic 2027 event.'
+  s6_validation:
+    result: option mode, register set; wedge not yet offered
+    tag: n/a
+    note: 90-day churn gate on the ZVI daily series (fall back to the XLSX if nothing changes). Current-demand mode
+      not run; no contact made (refusal).
+future_question: Was stand auf der Plattform fuer Abwaerme ueber Standort X, als wir unser Waermenetz oder unseren
+  Abwaerme-Deal darauf ausgelegt haben - kWh/a, kW, Temperatur, Verfuegbarkeit - und wann hat sich das geaendert oder
+  ist es verschwunden?
+buyers_now: []
+buyers_later:
+  - type: heat-network operators and their lenders in BEW-financed projects sized on a listed source
+    evidence: Jan -> Jul 2026 diff shows 5,441 value changes and 6,460 removals in one interval; WPG deadlines
+      2026-06-30 / 2028-06-30
+    tag: MED
+  - type: acquirers and covenant monitors on data-centre campuses whose waste-heat offtake is part of the asset
+    evidence: EnEfG s.11(2) reuse quotas from 2026-07-01; s.11(3) Nr.3 exemption; 218 DC-like rows in the table;
+      no dated dispute instance found
+    tag: MED
+  - type: Waermeplanung software vendors (greenventory, enersis, ENEKA, INFRA analytics/Tilia) as OEM licensees of a
+      change series
+    evidence: they consume the current view free and sell software; none publishes a change series
+    tag: LOW
+premium:
+  setup_hours: 16
+  monthly_eur: 2
+  note: ~2 days once (2 h landing source, ~1 day XLSX parse + contact-strip + ID-keyed diff, 0.5-1 day paginator
+    extension for the ZVI); ~60 MB/yr XLSX plus ~1.1 GB/yr JSON uncompressed
+wedge: A free monthly "Abwaerme-Aenderungsmonitor" - per Landkreis and Bundesland counts and MW/GWh of new, removed
+  and changed potentials, a data-centre filter and a temperature-band view; derived aggregates only, no rows, no
+  contacts, non-commercial (licence-compatible today); offered by e-mail to a Waermeplanung consultancy, one
+  Stadtwerk heat-planning team and one regional Energieagentur.
+kill_criteria:
+  - The BfEE, GovData or the ZVI publishes dated editions or a history view (publisher archive - withdrawal in reverse)
+  - The licence tightens, a machine-readable TDM reservation appears, or the ZVI gains a key or login
+  - Two consecutive XLSX editions identical, or the 90-day gate fails on the ZVI and the XLSX cadence exceeds six
+    months
+  - Counsel says the NC licence bars any paid derivative and the BfEE declines to relicense - the series stays
+    non-commercial; close the option (keep or donate the archive)
+  - Nobody has used the wedge by the review date
+  - A funded party (a Land agency, AGFW, a heat-planning software vendor) starts publishing the change series
+  - The 2026 evaluation of the platform restricts publication
+review_date: '2027-05-31'
+review_note: 'Brought forward from the twelve-month default: the post-31.03.2027 edition is the year''s largest churn
+  (as measured for 2026) and the BfEE''s planned 2026 evaluation should be visible by spring 2027. Interim check at
+  the next observed cut-off (~2026-10) to confirm the cadence and the ZVI uuid persistence.'
+route: portfolio
+ceiling:
+  eur_per_year_low: 25000
+  eur_per_year_high: 65000
+  tag: LOW
+  note: A dozen heat-planning subscribers at EUR 100-250/month plus one or two OEM feeds to software vendors at EUR
+    5-15k/yr; validation-only while the licence stays NC. Odds - ~60 % that the wedge conversation happens (the
+    practitioners are reachable), ~30 % within 24 months that a named organisation asks for the history, ~15 % that
+    money changes hands.
+owner_checks:
+  - 'ZVI in a browser (DevTools -> Network): confirm the table request is a plain GET on
+    /zvi-api/pfa/abwaermepotenziale with seite/anzahl, note any headers the app adds, whether the detail dialog
+    fetches a per-record /{uuid} route, and whether any export button or "Stand" date exists in the UI'
+  - 'GovData: is there a "Plattform fuer Abwaerme" dataset entry and which licence does it declare? DL-DE-BY-2.0 there
+    would flip station 4 to PASS'
+  - 'Counsel, one question: does DNG s.4(1)/(3) override a CC BY-NC 4.0 notice attached by a federal office to data it
+    must publish under s.17(2) S.3 EnEfG, for a derived, non-redistributing history product; and is a scrubbed
+    retention of the XLSX (contact columns dropped) sufficient on the personal-data side?'
+  - 'The single conversation that turns the option into a product: an e-mail to the BfEE asking for DL-DE-BY-2.0 under
+    DNG s.4(3) - the owner''s call, not made this session'
+  - 'Landing-page Datawrapper map: if a live chart id exists in the browser DOM, its dataset.csv versions would be a
+    small publisher-side aggregate archive'
+  - 'Subscribe to the BfEE RSS feed (site footer) as the landing watch for edition announcements'

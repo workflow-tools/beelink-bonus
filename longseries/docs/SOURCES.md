@@ -141,3 +141,24 @@ therefore does not fire; the Regulation half was closed on 2026-09-05 (morning).
 "respecting public security" clause: it is the hook under which the Bavarian DSOs withdrew
 their grid-display services from the Energie-Atlas Bayern (observed 2026-09-05, evening
 session; see the patterns dossier of that date).
+
+
+## Addendum 2026-09-06 — publisher-deletion evidence for station 5, and the APG fifth-publisher kill
+
+- **Amprion deletes superseded documents.** The storage-queue chain's by-question hunter probed the
+  `https://www.amprion.net/…/Netzanschlussregeln/` prefix: 77 Wayback-attested URLs, 60 GONE live
+  (`[HIGH]` on the live re-fetch). The rule documents persist at netztransparenz.de at their original
+  paths (FAQ V1.0 200 / Last-Modified 2026-05-13; Verfahrensdokumentation V1.1 200 / 2026-04-28,
+  re-fetched by the orchestrator); the maps do not. Recorded in `registry/schaltfeld.yaml` station 5.
+- **APG (Austria) is not the fifth publisher.** Screened 2026-09-06 as the proposed extension of the
+  Schaltfeld option: seven editions of `https://markt.apg.at/netz/netzanschluss/netzanschlusskapazitaeten/`
+  (Stand September 2024 → 1. August 2026; six Wayback captures plus the live page) hold 1,158 capacity
+  cells all "0 MW" and 579 flexible flags all set — structurally zero by APG's stated method
+  (Capacitypedia: 0 MW "if there is at least one hour in the year where an additional connection would
+  exacerbate an existing congestion"). KILL at station 3; reopen trigger and the Austrian legal note
+  (UrhG AT §§ 76c–76e; no commercial TDM exception; browse-wrap commercial-use bar on apg.at) in
+  `registry/schaltfeld.yaml`. The page's *Anschlussanträge per Bundesland* column is a moving monthly
+  series (Einspeisung 5,964 → 27,544 MW) and is noted in `registry/dso-storage-queue-register.yaml`
+  as evidence, not screened.
+- **Probe from containers:** `NODE_USE_ENV_PROXY=1` makes `archive-probe.mjs` honour the proxy;
+  exit 3 on the CDX preflight is intermittent — retry up to three times before calling it CANNOT RATE.

@@ -27,8 +27,15 @@ class Alert:
         return {"severity": self.severity, "code": self.code, "message": self.message}
 
 
-def evaluate(run: "RunResult", config: SourceConfig, *, last_change_at: datetime | None, now: datetime) -> list[Alert]:
+def evaluate(run: "RunResult", config: SourceConfig, *, last_change_at: datetime | None, now: datetime,
+             previously_captured: set[str] | None = None) -> list[Alert]:
+    """last_change_at is measured over the DOCUMENTS for a source that collects
+    documents, and over everything for a landing-only source. previously_captured
+    is the set of URLs this source has successfully captured before, which is what
+    separates a document that never arrived from one that was withdrawn."""
     alerts: list[Alert] = []
+    documents_are_the_payload = bool(config.accept_extensions)
+    seen_before = previously_captured or set()
 
     if run.failed and run.landing_status in (404, 410):
         alerts.append(Alert("P0", "LANDING_VANISHED",
@@ -39,6 +46,25 @@ def evaluate(run: "RunResult", config: SourceConfig, *, last_change_at: datetime
                             f"{config.source_id}: landing page {run.landing_url} could not be fetched "
                             f"(status {run.landing_status}, {run.error}). Unreachable is a routing problem, "
                             f"not a finding: check the network before concluding anything about the source."))
+
+    # A document that did not arrive. Nothing keyed on this before: run.failed means
+    # the LANDING page failed, and expect_min_documents is a floor on SURVIVORS whose
+    # threshold the growing document count outruns. An edition missed is an edition
+    # lost forever, so this is never a quiet counter.
+    for d in run.dispositions:
+        if d.get("disposition") != "failed":
+            continue
+        url, status = d.get("url"), d.get("http_status")
+        detail = f"status {status}" if status is not None else f"transport error: {d.get('error')}"
+        if url in seen_before:
+            alerts.append(Alert("P0", "DOCUMENT_WITHDRAWN",
+                                f"{config.source_id}: {url} was captured successfully before and now fails "
+                                f"({detail}). A withdrawal is the event this collector exists to witness — "
+                                f"the bytes we hold may be the only copy."))
+        else:
+            alerts.append(Alert("P1", "DOCUMENT_UNREACHABLE",
+                                f"{config.source_id}: {url} could not be fetched ({detail}); "
+                                f"this edition is not in the store."))
 
     for d in run.dispositions:
         if d.get("disposition") in ("new", "changed") and int(d.get("bytes") or 0) < config.min_payload_bytes:
@@ -66,14 +92,20 @@ def evaluate(run: "RunResult", config: SourceConfig, *, last_change_at: datetime
     if last_change_at is not None and not run.failed:
         age = now - last_change_at
         cadence = config.declared_cadence
-        c = run.counts
-        if c["new"] == 0 and c["changed"] == 0 and age > cadence:
+        # Scope: on a source that collects documents, the landing page's own prose
+        # drift is not a sign of life. One news teaser a month used to answer both
+        # halves of this guard and keep the alarms permanently silent while the
+        # documents sat frozen.
+        scope = [d for d in run.dispositions if d.get("role") != "landing"] if documents_are_the_payload else run.dispositions
+        what = "documents" if documents_are_the_payload else "files"
+        fresh = sum(1 for d in scope if d.get("disposition") in ("new", "changed"))
+        if fresh == 0 and age > cadence:
             alerts.append(Alert("P1", "ZERO_NEW_FILES",
-                                f"{config.source_id}: no new or changed files; last change {age.days} days ago, "
+                                f"{config.source_id}: no new or changed {what}; last change {age.days} days ago, "
                                 f"declared cadence {cadence.days} days. Collector broke, or publisher stopped."))
         if age > cadence * config.stale_tolerance:
             alerts.append(Alert("P1", "STALE",
                                 f"{config.source_id}: content unchanged for {age.days} days, more than "
-                                f"{config.stale_tolerance}x the declared cadence of {cadence.days} days. "
+                                f"{config.stale_tolerance}x the declared cadence of {cadence.days} days ({what}). "
                                 f"Publisher broke, or you are being served a cache."))
     return alerts

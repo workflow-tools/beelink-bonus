@@ -23,7 +23,7 @@ from pathlib import Path
 
 from .adapter import BaseAdapter
 from .config import ConfigError, load_source_config, parse_cadence
-from .heartbeat import Heartbeat, run_with_heartbeat
+from .heartbeat import Heartbeat, redact, run_with_heartbeat
 from .store import ContentAddressedStore
 
 
@@ -41,7 +41,13 @@ def _load(path: str):
 
 def cmd_validate(args) -> int:
     c = _load(args.source)
-    print(json.dumps({k: (str(v) if k == "declared_cadence" else v) for k, v in c.__dict__.items()}, indent=2))
+    # The heartbeat URL is an unauthenticated capability (anyone holding it can forge
+    # success pings and mute this source's dead-man's switch), and this output is
+    # what an operator pastes into an issue when asking for help.
+    shown = {k: (str(v) if k == "declared_cadence" else v) for k, v in c.__dict__.items()}
+    if shown.get("heartbeat_url"):
+        shown["heartbeat_url"] = f"set ({redact(shown['heartbeat_url'])})"
+    print(json.dumps(shown, indent=2))
     return 0
 
 

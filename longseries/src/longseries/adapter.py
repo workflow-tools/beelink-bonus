@@ -179,7 +179,12 @@ class BaseAdapter:
         def finish(run: RunResult) -> RunResult:
             finished = now if injected_clock else datetime.now(timezone.utc)
             run.finished_at = finished
-            run.alerts = evaluate(run, self.config, last_change_at=self.store.last_change_at(sid, exclude_capture_id=cid), now=now)
+            roles = ("document",) if self.config.accept_extensions else None
+            run.alerts = evaluate(
+                run, self.config,
+                last_change_at=self.store.last_change_at(sid, exclude_capture_id=cid, roles=roles),
+                now=now,
+                previously_captured=self.store.captured_urls(sid, exclude_capture_id=cid))
             manifest.update({
                 "finished_at": finished.isoformat(),
                 "landing_status": run.landing_status,

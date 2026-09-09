@@ -193,3 +193,62 @@ def test_heartbeat_failure_itself_does_not_mask_the_run_result():
 def test_no_heartbeat_configured_is_a_noop():
     result = run_with_heartbeat(lambda: _run([_d("u", "new")]), None)
     assert result.failed is False
+
+
+# ------------------------------------------- a document that did not arrive (F1)
+# No rule keyed on run.counts['failed'] — run.failed means the LANDING page failed.
+# With the shipped amprion settings, two new October PDFs returning 403 gave
+# counts {'new': 4, 'failed': 2}, alerts [], and a GET success ping: an edition
+# lost forever, reported as a clean run.
+
+def test_a_failed_document_raises_an_alert(config, now):
+    run = _run([_d("landing", "unchanged"), _d("https://x/oct.pdf", "failed", status=403)])
+    alerts = evaluate(run, config, last_change_at=now, now=now)
+    a = next(x for x in alerts if x.code == "DOCUMENT_UNREACHABLE")
+    assert a.severity == "P1" and "https://x/oct.pdf" in a.message and "403" in a.message
+
+
+def test_a_document_we_captured_before_that_now_fails_is_p0(config, now):
+    """A URL with a prior successful capture that now 403s is a retraction — the
+    single most valuable event this collector exists to witness."""
+    run = _run([_d("https://x/apr.pdf", "failed", status=403)])
+    alerts = evaluate(run, config, last_change_at=now, now=now,
+                      previously_captured={"https://x/apr.pdf"})
+    a = next(x for x in alerts if x.code == "DOCUMENT_WITHDRAWN")
+    assert a.severity == "P0" and "https://x/apr.pdf" in a.message
+
+
+def test_expect_min_documents_is_not_a_substitute_for_the_failure_rule(config, now):
+    """It is a floor on SURVIVORS, and the document count grows with every
+    edition: five documents, five 403s, expectation unset, no alert at all."""
+    config.expect_min_documents = None
+    run = _run([_d(f"https://x/{i}.pdf", "failed", status=403) for i in range(5)])
+    alerts = evaluate(run, config, last_change_at=now, now=now)
+    assert len([a for a in alerts if a.code == "DOCUMENT_UNREACHABLE"]) == 5
+
+
+# ----------------------------------- the landing page's own clock (F2)
+# Every index row counted towards last_change_at regardless of role, and the
+# landing page is deliberately saved as a payload. One news teaser a month on the
+# landing page reset the clock forever: 460 days of polls with the documents
+# frozen produced no STALE and no ZERO_NEW_FILES on a document source.
+
+def _landing(disposition):
+    return {"url": "https://example.test/netz/anschluss/", "role": "landing",
+            "disposition": disposition, "sha256": "a" * 64, "http_status": 200, "bytes": 90000}
+
+
+def test_landing_prose_drift_does_not_suppress_the_document_staleness_alarms(config, now):
+    from datetime import timedelta
+    run = _run([_landing("changed"), _d("https://x/a.pdf", "unchanged"), _d("https://x/b.pdf", "unchanged")])
+    alerts = evaluate(run, config, last_change_at=now - timedelta(days=460), now=now)
+    codes = {a.code for a in alerts}
+    assert "ZERO_NEW_FILES" in codes and "STALE" in codes
+
+
+def test_a_landing_only_source_still_counts_its_landing_page(config, now):
+    from datetime import timedelta
+    config.accept_extensions = []
+    run = _run([_landing("changed")])
+    alerts = evaluate(run, config, last_change_at=now - timedelta(days=460), now=now)
+    assert "ZERO_NEW_FILES" not in {a.code for a in alerts}, "for these sources the page IS the payload"

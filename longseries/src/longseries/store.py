@@ -208,13 +208,28 @@ class ContentAddressedStore:
         """Every capture record for a URL, in append (chronological) order."""
         return [r for r in self._iter_index(source_id) if r["source_url"] == source_url]
 
-    def last_change_at(self, source_id: str, *, exclude_capture_id: str | None = None) -> datetime | None:
+    def captured_urls(self, source_id: str, *, exclude_capture_id: str | None = None) -> set[str]:
+        """Every URL this source has ever successfully captured. A URL in here that
+        fails today was withdrawn; one that was never here merely never arrived."""
+        out: set[str] = set()
+        for r in self._iter_index(source_id):
+            if exclude_capture_id and r["capture_id"] == exclude_capture_id:
+                continue
+            out.add(r["source_url"])
+        return out
+
+    def last_change_at(self, source_id: str, *, exclude_capture_id: str | None = None,
+                       roles: tuple[str, ...] | None = None) -> datetime | None:
         """When did any URL of this source last get NEW or CHANGED bytes? Feeds the
         zero-new-files and staleness alarms. Excludes the current run so a run can
-        evaluate itself against history."""
+        evaluate itself against history. `roles` narrows it: a source that collects
+        documents must not have its staleness clock reset by the landing page's
+        prose, which drifts on its own schedule."""
         latest: datetime | None = None
         for r in self._iter_index(source_id):
             if exclude_capture_id and r["capture_id"] == exclude_capture_id:
+                continue
+            if roles is not None and r.get("role", "document") not in roles:
                 continue
             if r["disposition"] in (Disposition.NEW.value, Disposition.CHANGED.value):
                 t = datetime.fromisoformat(r["captured_at"])

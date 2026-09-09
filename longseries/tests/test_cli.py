@@ -38,3 +38,13 @@ def test_repair_trims_a_torn_trailing_index_line_from_the_cli(tmp_path, capsys):
     out = json.loads(capsys.readouterr().out)
     assert out["repaired"] is True and out["bytes_removed"] == 26
     assert len(store.versions("test-tso", "https://example.test/a")) == 1
+
+
+def test_validate_does_not_print_the_watchdog_token(tmp_path, capsys):
+    """M-2: `validate` output is the other thing an operator pastes into an issue."""
+    p = tmp_path / "s.yaml"
+    p.write_text(SOURCE_YAML + "heartbeat_url: https://hc-ping.com/8f3c1e2a-SECRET-TOKEN-amprion\n", encoding="utf-8")
+    assert main(["validate", str(p)]) == 0
+    out = capsys.readouterr().out
+    assert "SECRET-TOKEN" not in out
+    assert "hc-ping.com" in out, "the operator still needs to see that one is configured, and which host"

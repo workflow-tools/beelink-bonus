@@ -304,3 +304,41 @@ def test_404_on_a_document_is_not_retried_and_is_recorded_as_failed(config, stor
     _mk(site, config, store).poll(now=now, capture_id="c1")
     hits = [q for q in site.requests if str(q.url).endswith("2026-08.pdf")]
     assert len(hits) == 1
+
+
+# ------------------------------ a document that stopped being served (F1, F2)
+
+def test_a_previously_captured_document_that_now_403s_is_a_p0(config, store, site, landing_html, now):
+    """The run used to report failed=False, alerts=[] and ping GET success while an
+    edition was lost forever — and a withdrawal is the most valuable event this
+    collector can witness."""
+    _happy_site(site, config, landing_html)
+    a = _mk(site, config, store)
+    a.poll(now=now, capture_id="c1")
+    site.set("https://example.test/files/Netzanschluss_Kapazitaeten_2026-08.pdf", 403, b"forbidden")
+    run = a.poll(now=now, capture_id="c2")
+    assert run.counts["failed"] == 1
+    al = next(x for x in run.alerts if x.code == "DOCUMENT_WITHDRAWN")
+    assert al.severity == "P0" and "2026-08.pdf" in al.message
+
+
+def test_a_never_seen_document_that_fails_is_a_p1_not_a_p0(config, store, site, landing_html, now):
+    _happy_site(site, config, landing_html)
+    site.set("https://example.test/netz/anschluss/files/07_Anschluss_v2.xlsx", 503, b"")
+    run = _mk(site, config, store).poll(now=now, capture_id="c1")
+    codes = {x.code: x.severity for x in run.alerts}
+    assert codes.get("DOCUMENT_UNREACHABLE") == "P1" and "DOCUMENT_WITHDRAWN" not in codes
+
+
+def test_landing_prose_drift_does_not_hide_frozen_documents(config, store, site, landing_html, now):
+    """F2 end to end: 60 days later the documents are byte-identical and only the
+    landing page's prose moved. The staleness clock must be the documents'."""
+    from datetime import timedelta
+    _happy_site(site, config, landing_html)
+    a = _mk(site, config, store)
+    a.poll(now=now, capture_id="c1")
+    later = now + timedelta(days=60)
+    site.set(config.landing_url, 200, landing_html.replace("Download Kapazitäten", "Neu: Pressemitteilung").encode())
+    run = a.poll(now=later, capture_id="c2")
+    assert next(d for d in run.dispositions if d.get("role") == "landing")["disposition"] == "changed"
+    assert {x.code for x in run.alerts} >= {"ZERO_NEW_FILES", "STALE"}

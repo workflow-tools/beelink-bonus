@@ -28,6 +28,23 @@ _ISO_DURATION = re.compile(
 
 REQUIRED = ("source_id", "publisher", "landing_url", "declared_cadence", "polarity", "contact")
 
+# The source_id is joined into the data root and names the source's whole tree.
+# A '/', a '..' or a stray space is a typo, not an attack (sources/ is a repo file
+# on a read-only mount) — but a '/'-prefixed id writes outside the mounted volume,
+# into the container's writable layer, which the next `up --build` destroys, and a
+# 300-character id surfaces as an uncaught ENAMETOOLONG in the schedule loop.
+_SOURCE_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
+
+
+def _coerce(fn, value, key: str, p: Path):
+    """int()/float() raise a plain ValueError, and ConfigError SUBCLASSES ValueError:
+    `except ConfigError` never caught it, so a malformed value escaped the schedule
+    loop and exited the process into a restart loop that pinged nothing."""
+    try:
+        return fn(value)
+    except (TypeError, ValueError) as e:
+        raise ConfigError(f"{p}: {key} must be a {fn.__name__}, got {value!r}") from e
+
 
 @dataclass
 class SourceConfig:
@@ -68,7 +85,11 @@ def parse_cadence(text: str) -> timedelta:
 def load_source_config(path: str | Path) -> SourceConfig:
     p = Path(path)
     try:
-        raw = yaml.safe_load(p.read_text()) or {}
+        text = p.read_text()
+    except OSError as e:  # a failed ./sources mount is a config problem, not a crash
+        raise ConfigError(f"{p}: cannot be read: {e}") from e
+    try:
+        raw = yaml.safe_load(text) or {}
     except yaml.YAMLError as e:
         raise ConfigError(f"{p}: invalid YAML: {e}") from e
     if not isinstance(raw, dict):
@@ -76,6 +97,15 @@ def load_source_config(path: str | Path) -> SourceConfig:
     missing = [k for k in REQUIRED if k not in raw or raw[k] in (None, "")]
     if missing:
         raise ConfigError(f"{p}: missing required field(s): {', '.join(missing)}")
+    if not _SOURCE_ID.match(str(raw["source_id"])):
+        raise ConfigError(f"{p}: source_id {raw['source_id']!r} must match {_SOURCE_ID.pattern} — "
+                          f"it names a directory under the data root, so no '/', '..', spaces or 64+ characters")
+    heartbeat_url = raw.get("heartbeat_url")
+    if heartbeat_url is not None:
+        heartbeat_url = str(heartbeat_url)
+        if not heartbeat_url.startswith(("http://", "https://")):
+            raise ConfigError(f"{p}: heartbeat_url must be an http(s) URL, got {heartbeat_url!r} "
+                              f"(an unexpanded ${{VAR}} or a bare host looks exactly like this)")
     if raw["polarity"] not in POLARITIES:
         raise ConfigError(f"{p}: polarity must be one of {POLARITIES}, got {raw['polarity']!r}")
     exts = raw.get("accept_extensions")
@@ -91,12 +121,13 @@ def load_source_config(path: str | Path) -> SourceConfig:
         polarity=str(raw["polarity"]),
         contact=str(raw["contact"]),
         accept_extensions=[e.lower() for e in exts],
-        min_payload_bytes=int(raw.get("min_payload_bytes", 1024)),
+        min_payload_bytes=_coerce(int, raw.get("min_payload_bytes", 1024), "min_payload_bytes", p),
         licence=str(raw.get("licence", "none-analysed")),
         licence_evidence_url=raw.get("licence_evidence_url"),
-        heartbeat_url=raw.get("heartbeat_url"),
+        heartbeat_url=heartbeat_url,
         declared_cadence_evidence=raw.get("declared_cadence_evidence"),
-        stale_tolerance=float(raw.get("stale_tolerance", 1.5)),
-        expect_min_documents=(int(raw["expect_min_documents"]) if raw.get("expect_min_documents") is not None else None),
+        stale_tolerance=_coerce(float, raw.get("stale_tolerance", 1.5), "stale_tolerance", p),
+        expect_min_documents=(_coerce(int, raw["expect_min_documents"], "expect_min_documents", p)
+                              if raw.get("expect_min_documents") is not None else None),
         expect_landing_text=(str(raw["expect_landing_text"]) if raw.get("expect_landing_text") else None),
     )

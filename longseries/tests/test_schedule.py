@@ -101,3 +101,65 @@ def test_schedule_pings_the_watchdog_with_the_reason(tmp_path, monkeypatch):
 def test_config_failure_ping_is_a_noop_without_an_env_url(tmp_path, monkeypatch):
     monkeypatch.delenv("LONGSERIES_HEARTBEAT_URL", raising=False)
     assert _ping_config_failure("s.yaml", ConfigError("x")) is False
+
+
+# --- a crash inside the loop must still reach the watchdog --------------------
+# LS-5s: the loop's `except Exception` swallowed anything that went wrong BEFORE
+# the per-source Heartbeat existed (a non-string heartbeat_url made
+# Heartbeat.__init__ raise AttributeError), printed one line and slept. Three
+# iterations, zero pings, `docker ps` showing the container Up. F3 is the same
+# shape one class further out: only ConfigError was caught around _load.
+
+def _watchdog(monkeypatch):
+    seen = []
+
+    def handler(request):
+        seen.append((str(request.url), request.content.decode()))
+        return httpx.Response(200)
+
+    monkeypatch.setenv("LONGSERIES_HEARTBEAT_URL", "https://hc-ping.com/uuid-test")
+    return seen, httpx.MockTransport(handler)
+
+
+def _good_source(tmp_path):
+    p = tmp_path / "good.yaml"
+    p.write_text("source_id: test-tso\npublisher: p\nlanding_url: https://example.test/\n"
+                 "declared_cadence: P1D\npolarity: lists_state\ncontact: mailto:a@b.test\n", encoding="utf-8")
+    return p
+
+
+def test_schedule_pings_when_the_poll_itself_crashes(tmp_path, monkeypatch):
+    seen, transport = _watchdog(monkeypatch)
+
+    def boom(_args):
+        raise AttributeError("'int' object has no attribute 'rstrip'")
+
+    monkeypatch.setattr("longseries.__main__.cmd_poll", boom)
+
+    def sleeper(_s):
+        raise _Stop()
+
+    with pytest.raises(_Stop):
+        cmd_schedule(_Args(_good_source(tmp_path), tmp_path / "data"),
+                     sleeper=sleeper, heartbeat_transport=transport)
+    assert len(seen) == 1, "a crash with no Heartbeat yet must still reach the watchdog"
+    url, body = seen[0]
+    assert url.endswith("/fail") and "AttributeError" in body
+
+
+def test_schedule_survives_a_config_failure_that_is_not_a_config_error(tmp_path, monkeypatch):
+    seen, transport = _watchdog(monkeypatch)
+    monkeypatch.setattr("longseries.__main__._load",
+                        lambda _p: (_ for _ in ()).throw(ValueError("invalid literal for int()")))
+    calls = []
+
+    def sleeper(_s):
+        calls.append(_s)
+        if len(calls) >= 2:
+            raise _Stop()
+
+    with pytest.raises(_Stop):
+        cmd_schedule(_Args(_good_source(tmp_path), tmp_path / "data"),
+                     sleeper=sleeper, heartbeat_transport=transport)
+    assert len(calls) == 2, "the loop must retry, not exit into `restart: unless-stopped`"
+    assert all(u.endswith("/fail") for u, _ in seen) and len(seen) == 2

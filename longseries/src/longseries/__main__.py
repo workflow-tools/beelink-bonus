@@ -45,16 +45,17 @@ def cmd_validate(args) -> int:
     return 0
 
 
-def _ping_config_failure(source: str, err: Exception, transport=None) -> bool:
-    """A config error is the one failure the per-source heartbeat cannot report from
-    the config, because the config is what is broken. Fall back to the environment
-    URL so the operator learns the reason within one interval instead of inferring
-    it from a check that goes stale a day later. Never raises."""
+def _ping_config_failure(source: str, err: Exception, transport=None, *, what: str = "config error") -> bool:
+    """A config error — and any crash before the per-source Heartbeat exists — is the
+    one failure that heartbeat cannot report, because the thing it would be built
+    from is what is broken. Fall back to the environment URL so the operator learns
+    the reason within one interval instead of inferring it from a check that goes
+    stale a day later. Never raises."""
     url = os.environ.get("LONGSERIES_HEARTBEAT_URL")
     if not url:
         return False
     try:
-        Heartbeat(url, transport=transport).fail(f"config error in {source}: {err}")
+        Heartbeat(url, transport=transport).fail(f"{what} in {source}: {err!r}")
         return True
     except Exception as e:  # never raise from the alert path — but say so, do not swallow silently
         print(f"[schedule] watchdog ping failed: {e!r}", file=sys.stderr)
@@ -110,9 +111,12 @@ def cmd_schedule(args, *, sleeper=time.sleep, heartbeat_transport=None) -> int:
         # exiting into a restart loop that never pings anything.
         try:
             config = _load(args.source)
-        except ConfigError as e:
+        except Exception as e:  # NOT `except ConfigError`: ConfigError subclasses ValueError,
+            # so the relation runs the wrong way and a plain ValueError (a malformed
+            # int) or an OSError (a failed ./sources mount) escaped into a restart
+            # loop that pinged nothing. Anything at all here loops and retries.
             pinged = _ping_config_failure(args.source, e, heartbeat_transport)
-            print(f"[schedule] config error: {e}; watchdog {'notified' if pinged else 'NOT notified (no LONGSERIES_HEARTBEAT_URL)'}; retrying in {int(every)}s", file=sys.stderr)
+            print(f"[schedule] config error: {e!r}; watchdog {'notified' if pinged else 'NOT notified (no LONGSERIES_HEARTBEAT_URL)'}; retrying in {int(every)}s", file=sys.stderr)
             sleeper(every)
             continue
         if not gated:
@@ -124,8 +128,14 @@ def cmd_schedule(args, *, sleeper=time.sleep, heartbeat_transport=None) -> int:
         try:
             rc = cmd_poll(args)
             print(f"[schedule] poll finished rc={rc}; sleeping {int(every)}s", file=sys.stderr)
-        except Exception as e:  # a crash must not stop the schedule; the missing heartbeat has already fired
-            print(f"[schedule] poll crashed: {e!r}; sleeping {int(every)}s", file=sys.stderr)
+        except Exception as e:
+            # A crash must not stop the schedule — but it must not be silent either.
+            # run_with_heartbeat only pings once a Heartbeat exists, and everything
+            # that happens before that (building it, opening the store) used to be
+            # swallowed here: three iterations, no ping, container Up. A duplicate
+            # /fail costs nothing; a missing one costs the whole safety story.
+            pinged = _ping_config_failure(args.source, e, heartbeat_transport, what="poll crashed")
+            print(f"[schedule] poll crashed: {e!r}; watchdog {'notified' if pinged else 'NOT notified (no LONGSERIES_HEARTBEAT_URL)'}; sleeping {int(every)}s", file=sys.stderr)
         sleeper(every)
 
 

@@ -90,3 +90,49 @@ def test_source_config_parses_structural_expectations(tmp_path):
     p.write_text(YAML_OK)
     c = load_source_config(p)
     assert c.expect_min_documents is None and c.expect_landing_text is None
+
+
+# ------------------------------------------------------ malformed values (F3)
+# ConfigError subclasses ValueError, so `except ConfigError` never caught the
+# plain ValueError that int()/float() raise. A '50k' or a '1,5' escaped the
+# schedule loop, exited the process non-zero, and `restart: unless-stopped`
+# looped forever with no ping — the same shape as the sys.exit(1) bug, one
+# exception class further out. Every malformed value must be a ConfigError.
+
+@pytest.mark.parametrize("line,replacement", [
+    ("min_payload_bytes: 4096", "min_payload_bytes: 50k"),
+    ("min_payload_bytes: 4096", "min_payload_bytes: [1, 2]"),
+    ("min_payload_bytes: 4096", "stale_tolerance: '1,5'"),
+    ("min_payload_bytes: 4096", "expect_min_documents: three"),
+    ("heartbeat_url: https://hc.test/ping/abc", "heartbeat_url: 1234567890"),
+    ("heartbeat_url: https://hc.test/ping/abc", "heartbeat_url: ${LONGSERIES_HEARTBEAT_URL_AMPRION}"),
+    ("heartbeat_url: https://hc.test/ping/abc", "heartbeat_url: hc-ping.com/uuid"),
+    ("source_id: de-tso-amprion-netzanschluss", "source_id: ../OUTSIDE/pwned"),
+    ("source_id: de-tso-amprion-netzanschluss", "source_id: /tmp/absolute-escape"),
+    ("source_id: de-tso-amprion-netzanschluss", "source_id: 'amp '"),
+    ("source_id: de-tso-amprion-netzanschluss", "source_id: " + "x" * 300),
+])
+def test_a_malformed_value_is_a_config_error_and_nothing_else(tmp_path, line, replacement):
+    p = tmp_path / "s.yaml"
+    p.write_text(YAML_OK.replace(line, replacement))
+    with pytest.raises(ConfigError):
+        load_source_config(p)
+
+
+def test_a_missing_source_file_is_a_config_error(tmp_path):
+    """A failed ./sources mount. FileNotFoundError is not a ConfigError, so the
+    schedule loop let it kill the container with no ping."""
+    with pytest.raises(ConfigError):
+        load_source_config(tmp_path / "not-mounted.yaml")
+
+
+def test_source_id_stays_inside_the_data_root(tmp_path):
+    """sources/*.yaml is a repo file on a read-only mount, so this is a typo
+    footgun, not input hostility — but a '/'-prefixed id writes into the
+    container's writable layer, which `up --build` destroys."""
+    from longseries.store import ContentAddressedStore
+    p = tmp_path / "s.yaml"
+    p.write_text(YAML_OK)
+    c = load_source_config(p)
+    root = (tmp_path / "data").resolve()
+    assert root in ContentAddressedStore(root).source_dir(c.source_id).resolve().parents

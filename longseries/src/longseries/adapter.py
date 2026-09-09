@@ -43,6 +43,23 @@ def canonical_text_sha256(html_bytes: bytes) -> str:
     return sha256_hex(text.encode("utf-8"))
 
 
+class PayloadLimitExceeded(httpx.HTTPError):
+    """A fetch that refused to end. httpx's Timeout is per connect/read/write/pool:
+    there is no whole-request budget, so a server dribbling bytes just inside the
+    read timeout holds one _get() open for hundreds of hours. poll() then never
+    returns, so NOTHING pings — not success, not /fail — and the process is alive,
+    so `restart: unless-stopped` never fires either. An httpx.HTTPError so a
+    landing page becomes a failed run and a document becomes a failed disposition."""
+
+
+class OversizedPayload(PayloadLimitExceeded):
+    pass
+
+
+class StalledDownload(PayloadLimitExceeded):
+    pass
+
+
 class LandingVanished(Exception):
     """The landing page itself returned 404/410. P0: the section moved or the source is gone."""
 
@@ -84,13 +101,17 @@ class BaseAdapter:
     retry_statuses = (429, 500, 502, 503, 504)
     timeout_seconds = 60.0
     inter_request_delay = 1.5  # seconds between document fetches; 1-2s is the floor for public bodies
+    max_bytes = 256 * 1024 * 1024   # ceiling on ONE document; the biggest real one is ~10 MB
+    max_request_seconds = 900.0     # whole-request wall clock, which httpx does not offer
 
     def __init__(self, config: SourceConfig, store: ContentAddressedStore, *,
                  transport: httpx.BaseTransport | None = None,
-                 sleeper: Callable[[float], None] | None = None):
+                 sleeper: Callable[[float], None] | None = None,
+                 monotonic: Callable[[], float] | None = None):
         self.config = config
         self.store = store
         self._sleep = sleeper or time.sleep
+        self._monotonic = monotonic or time.monotonic
         # Honest, identifiable, with a way to reach us: this is the station-5
         # withdrawal-risk mitigation, not politeness theatre.
         ua = f"longseries/{__version__} (+{config.contact}; source={config.source_id})"
@@ -112,16 +133,28 @@ class BaseAdapter:
         while True:
             attempt += 1
             try:
-                response = self.client.get(url)
+                # Streamed, so the two hard limits below are enforced WHILE the bytes
+                # arrive rather than after; a retryable status never downloads a body.
+                with self.client.stream("GET", url) as response:
+                    if response.status_code in self.retry_statuses and attempt < self.max_attempts:
+                        self._sleep(self._backoff(attempt))
+                        continue
+                    data = bytearray()
+                    deadline = self._monotonic() + self.max_request_seconds
+                    for chunk in response.iter_bytes():
+                        data.extend(chunk)
+                        if len(data) > self.max_bytes:
+                            raise OversizedPayload(f"{url}: over {self.max_bytes} bytes; refusing to buffer it")
+                        if self._monotonic() > deadline:
+                            raise StalledDownload(f"{url}: still arriving after {self.max_request_seconds}s "
+                                                  f"({len(data)} bytes); abandoning this fetch")
+                    return httpx.Response(response.status_code, headers=response.headers, content=bytes(data),
+                                          request=response.request, history=list(response.history))
             except httpx.TransportError:
                 if attempt >= self.max_attempts:
                     raise
                 self._sleep(self._backoff(attempt))
                 continue
-            if response.status_code in self.retry_statuses and attempt < self.max_attempts:
-                self._sleep(self._backoff(attempt))
-                continue
-            return response
 
     def fetch_landing(self) -> httpx.Response:
         response = self._get(self.config.landing_url)
@@ -129,6 +162,30 @@ class BaseAdapter:
             raise LandingVanished(self.config.landing_url, response.status_code)
         response.raise_for_status()
         return response
+
+    # ------------------------------------------------- is this the document?
+    _HTML_SNIFF = (b"<!doctype html", b"<html", b"<head", b"<!--")
+
+    @staticmethod
+    def _extension(url: str) -> str:
+        name = urlparse(url).path.rsplit("/", 1)[-1].lower()
+        return "." + name.rsplit(".", 1)[-1] if "." in name else ""
+
+    def _content_mismatch(self, url: str, response: httpx.Response) -> str | None:
+        """A 200 whose body is not the kind of thing the URL promised. min_payload_bytes
+        catches an 8 KB interstitial; a 60 KB maintenance page served at a .pdf URL
+        sails past it and was recorded as a new edition — then as another one when the
+        real document came back: two transitions of a document that never changed. The
+        content-type header was already in the index row and read nowhere."""
+        ext = self._extension(url)
+        ctype = (response.headers.get("content-type") or "").split(";")[0].strip().lower()
+        head = response.content[:1024].lstrip().lower()
+        if ext not in (".html", ".htm", ".xhtml") and (ctype in ("text/html", "application/xhtml+xml")
+                                                       or head.startswith(self._HTML_SNIFF)):
+            return f"is HTML (content-type {ctype!r}) at a {ext or 'document'} URL"
+        if ext == ".pdf" and not response.content.startswith(b"%PDF-"):
+            return f"does not begin with %PDF- (content-type {ctype!r})"
+        return None
 
     # -------------------------------------------------------- discovery
     def discover(self, html: str, base_url: str) -> list[str]:
@@ -236,7 +293,7 @@ class BaseAdapter:
                 self._sleep(self.inter_request_delay)
             try:
                 response = self._get(url)
-            except httpx.TransportError as e:
+            except (httpx.TransportError, PayloadLimitExceeded) as e:
                 dispositions.append({"url": url, "disposition": "failed", "sha256": None, "http_status": None, "bytes": 0, "error": str(e)})
                 continue
             if response.status_code != 200:
@@ -245,8 +302,14 @@ class BaseAdapter:
             cap = self.store.save(sid, url, response.content, now,
                                   http_status=response.status_code, headers=dict(response.headers),
                                   discovered_on=str(landing.url), capture_id=cid)
-            dispositions.append({"url": url, "disposition": cap.disposition.value, "sha256": cap.sha256,
-                                 "http_status": response.status_code, "bytes": len(response.content)})
+            row = {"url": url, "disposition": cap.disposition.value, "sha256": cap.sha256,
+                   "http_status": response.status_code, "bytes": len(response.content)}
+            problem = self._content_mismatch(url, response)
+            if problem:
+                # Stored regardless: a block page is the evidence of when access was
+                # denied, and this store never discards bytes it received.
+                row["content_problem"] = problem
+            dispositions.append(row)
 
         expect = self.config.expect_landing_text
         met = None if not expect else (expect.casefold() in visible_text(landing.content).casefold())

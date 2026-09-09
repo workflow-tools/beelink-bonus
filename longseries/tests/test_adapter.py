@@ -342,3 +342,97 @@ def test_landing_prose_drift_does_not_hide_frozen_documents(config, store, site,
     run = a.poll(now=later, capture_id="c2")
     assert next(d for d in run.dispositions if d.get("role") == "landing")["disposition"] == "changed"
     assert {x.code for x in run.alerts} >= {"ZERO_NEW_FILES", "STALE"}
+
+
+# --------------------------------- no fetch may run forever or unbounded (H-4)
+
+def _dribble(chunks, clock, seconds_per_chunk, ctype="application/pdf"):
+    def handler(request):
+        def gen():
+            for _ in range(chunks):
+                clock[0] += seconds_per_chunk
+                yield b"x" * 40
+        return httpx.Response(200, headers={"content-type": ctype}, content=gen(), request=request)
+    return httpx.MockTransport(handler)
+
+
+def test_a_dribbling_server_cannot_hang_the_schedule_forever(config, store):
+    """httpx's Timeout is per connect/read/write/pool — there is no whole-request
+    budget, so a server sending 40 bytes just inside the read timeout kept one
+    _get() alive for hundreds of hours. poll() never returned, so NO ping was sent
+    (not success, not /fail) and the process stayed alive, so restart never fired."""
+    from longseries.adapter import StalledDownload
+    clock = [0.0]
+    a = BaseAdapter(config, store, transport=_dribble(10_000, clock, 30.0),
+                    sleeper=lambda s: None, monotonic=lambda: clock[0])
+    a.max_request_seconds = 300.0
+    with pytest.raises(StalledDownload):
+        a._get("https://example.test/slow.pdf")
+
+
+def test_an_unbounded_payload_is_refused_instead_of_buffered(config, store):
+    """response.content buffered 200 MB in one go with no ceiling anywhere."""
+    from longseries.adapter import OversizedPayload
+    clock = [0.0]
+    a = BaseAdapter(config, store, transport=_dribble(10_000, clock, 0.0),
+                    sleeper=lambda s: None, monotonic=lambda: clock[0])
+    a.max_bytes = 4000
+    with pytest.raises(OversizedPayload):
+        a._get("https://example.test/huge.pdf")
+
+
+def test_a_stalled_document_fails_that_document_not_the_whole_run(config, store, site, landing_html, now, monkeypatch):
+    clock = [0.0]
+    dribbler = _dribble(10_000, clock, 30.0)
+    _happy_site(site, config, landing_html)
+
+    def handler(request):
+        if str(request.url).endswith("2026-08.pdf"):
+            return dribbler.handler(request)
+        return site.handler(request)
+
+    a = BaseAdapter(config, store, transport=httpx.MockTransport(handler),
+                    sleeper=lambda s: None, monotonic=lambda: clock[0])
+    a.max_request_seconds = 300.0
+    run = a.poll(now=now, capture_id="c1")
+    assert run.failed is False
+    d = {x["url"]: x for x in run.dispositions}
+    assert d["https://example.test/files/Netzanschluss_Kapazitaeten_2026-08.pdf"]["disposition"] == "failed"
+    assert any(x.code == "DOCUMENT_UNREACHABLE" for x in run.alerts), "and it must reach the watchdog"
+
+
+def test_a_stalled_landing_page_is_a_failed_run_not_a_hang(config, store):
+    clock = [0.0]
+    a = BaseAdapter(config, store, transport=_dribble(10_000, clock, 30.0, ctype="text/html"),
+                    sleeper=lambda s: None, monotonic=lambda: clock[0])
+    a.max_request_seconds = 300.0
+    run = a.poll(now=None, capture_id="c1")
+    assert run.failed is True
+    assert any(x.code == "LANDING_UNREACHABLE" for x in run.alerts)
+
+
+# ------------------------- an error page served with a 200 is not an edition (LS-6u)
+
+def test_a_large_html_error_page_at_a_pdf_url_is_not_a_new_edition(config, store, site, landing_html, now):
+    """min_payload_bytes catches an 8 KB interstitial; a 60 KB maintenance page
+    sails past it and was stored as a changed edition, twice over (once on the way
+    in, once when the real PDF came back) — two transitions of a document that
+    never changed. The content-type was recorded in the row and read nowhere."""
+    _happy_site(site, config, landing_html)
+    a = _mk(site, config, store)
+    a.poll(now=now, capture_id="c1")
+    outage = b"<!DOCTYPE html><html><body>Wartungsarbeiten. " + b"&nbsp;" * 10000 + b"</body></html>"
+    site.set("https://example.test/files/Netzanschluss_Kapazitaeten_2026-08.pdf", 200, outage,
+             {"content-type": "text/html; charset=utf-8"})
+    run = a.poll(now=now, capture_id="c2")
+    al = next(x for x in run.alerts if x.code == "WRONG_CONTENT_TYPE")
+    assert al.severity == "P1" and "2026-08.pdf" in al.message
+    import hashlib
+    assert store.blob_path(config.source_id, hashlib.sha256(outage).hexdigest()).exists(), \
+        "still stored: the block page is the evidence of when access was denied"
+
+
+def test_a_real_pdf_raises_no_content_type_alert(config, store, site, landing_html, now):
+    _happy_site(site, config, landing_html)
+    run = _mk(site, config, store).poll(now=now, capture_id="c1")
+    assert not any(x.code == "WRONG_CONTENT_TYPE" for x in run.alerts)

@@ -72,6 +72,12 @@ def evaluate(run: "RunResult", config: SourceConfig, *, last_change_at: datetime
                                 f"{config.source_id}: {d['url']} is {d.get('bytes')} bytes "
                                 f"(< {config.min_payload_bytes}); an error page served with a 200?"))
 
+    for d in run.dispositions:
+        if d.get("content_problem") and d.get("disposition") in ("new", "changed"):
+            alerts.append(Alert("P1", "WRONG_CONTENT_TYPE",
+                                f"{config.source_id}: {d['url']} {d['content_problem']}. The bytes are stored "
+                                f"(a block page is evidence), but do NOT read this as a new edition."))
+
     if not run.failed:
         docs = [d for d in run.dispositions if d.get("role") != "landing"]
         ok_docs = [d for d in docs if d.get("disposition") != "failed"]

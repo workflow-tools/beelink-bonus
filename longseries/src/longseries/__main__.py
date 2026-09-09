@@ -7,6 +7,8 @@
     python -m longseries extract  sources/x.yaml --data /data [--replay]     # bronze -> silver (needs .[extract])
     python -m longseries series   sources/x.yaml --data /data [--json]       # silver -> transitions
 
+    python -m longseries repair   sources/x.yaml --data /data                # trim a torn trailing index line
+
 Exit codes: 0 clean · 2 run failed (a P0 fired) · 3 run completed with P1 alerts.
 Alerts go to stderr so a scheduler's log shows them without parsing JSON."""
 from __future__ import annotations
@@ -148,6 +150,17 @@ def cmd_series(args) -> int:
     return 0
 
 
+def cmd_repair(args) -> int:
+    """Trim a torn TRAILING line from index.jsonl — the one damage a killed or
+    out-of-space writer can leave. Anything else raises: a corrupt row in the
+    middle of the file is a capture unaccounted for, never something to drop."""
+    config = _load(args.source)
+    removed = ContentAddressedStore(Path(args.data)).repair_index(config.source_id)
+    print(json.dumps({"source_id": config.source_id, "bytes_removed": removed,
+                      "repaired": bool(removed)}, indent=2))
+    return 0
+
+
 def cmd_show(args) -> int:
     config = _load(args.source)
     store = ContentAddressedStore(Path(args.data))
@@ -166,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="longseries")
     sub = p.add_subparsers(dest="cmd", required=True)
     for name, fn in (("poll", cmd_poll), ("schedule", cmd_schedule), ("show", cmd_show), ("validate", cmd_validate),
-                     ("extract", cmd_extract), ("series", cmd_series)):
+                     ("extract", cmd_extract), ("series", cmd_series), ("repair", cmd_repair)):
         sp = sub.add_parser(name)
         sp.add_argument("source")
         if name != "validate":

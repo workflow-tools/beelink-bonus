@@ -135,3 +135,150 @@ def test_store_isolates_sources(store, now):
     assert store.blob_path("b", hashlib.sha256(b"same").hexdigest()).exists()
     assert store.versions("a", "https://example.test/x")[0]["source_id"] == "a"
     assert store.versions("b", "https://example.test/x")[0]["source_id"] == "b"
+
+
+# --------------------------------------------------------- torn index (LS-1s)
+# A partial trailing line — what ENOSPC or a SIGKILL inside a buffered flush
+# leaves — used to poison the whole index permanently: versions(), last_change_at()
+# and the next save() (which calls versions()) all raised a bare JSONDecodeError,
+# so every future poll died at the landing page over years of undamaged rows.
+
+def test_a_torn_trailing_index_line_names_itself_instead_of_raising_json_errors(store, now):
+    from longseries.store import IndexCorrupt
+    for i in range(3):
+        store.save("test-tso", f"https://example.test/{i}", f"v{i}".encode(), now,
+                   http_status=200, headers={}, discovered_on="x", capture_id="c1")
+    idx = store.index_path("test-tso")
+    with open(idx, "a", encoding="utf-8") as f:
+        f.write('{"capture_id": "c2", "source_url": "https://example.test/3", "sha2')
+    with pytest.raises(IndexCorrupt) as e:
+        store.versions("test-tso", "https://example.test/0")
+    assert e.value.source_id == "test-tso" and e.value.lineno == 4
+    assert str(idx) in str(e.value), "the operator must be told which file to repair"
+
+
+def test_repair_trims_a_torn_trailing_line_and_keeps_every_good_row(store, now):
+    for i in range(3):
+        store.save("test-tso", f"https://example.test/{i}", f"v{i}".encode(), now,
+                   http_status=200, headers={}, discovered_on="x", capture_id="c1")
+    intact = store.index_path("test-tso").read_bytes()
+    with open(store.index_path("test-tso"), "a", encoding="utf-8") as f:
+        f.write('{"capture_id": "c2", "sha2')
+    assert store.repair_index("test-tso") == 26
+    assert store.index_path("test-tso").read_bytes() == intact
+    assert len(store.versions("test-tso", "https://example.test/0")) == 1
+    store.save("test-tso", "https://example.test/9", b"after", now,
+               http_status=200, headers={}, discovered_on="x", capture_id="c3")
+
+
+def test_repair_refuses_to_drop_a_corrupt_line_that_is_not_the_last(store, now):
+    from longseries.store import IndexCorrupt
+    store.save("test-tso", "https://example.test/0", b"v0", now, http_status=200, headers={}, discovered_on="x", capture_id="c1")
+    idx = store.index_path("test-tso")
+    idx.write_bytes(b'{"broken\n' + idx.read_bytes())
+    with pytest.raises(IndexCorrupt):
+        store.repair_index("test-tso"), "silently dropping a mid-file row would lose a capture"
+
+
+def test_a_failed_index_append_leaves_the_index_byte_identical(store, now, monkeypatch):
+    """ENOSPC halfway through the row. Without a rollback the torn line stays on
+    disk and every later read AND write of this source dies on it."""
+    for i in range(3):
+        store.save("test-tso", f"https://example.test/{i}", f"v{i}".encode(), now,
+                   http_status=200, headers={}, discovered_on="x", capture_id="c1")
+    idx = store.index_path("test-tso")
+    intact = idx.read_bytes()
+
+    real_open = open
+
+    def flaky_open(path, mode="r", *a, **kw):
+        f = real_open(path, mode, *a, **kw)
+        if "a" in mode:
+            def half(s, _w=f.write):
+                _w(s[: len(s) // 2])
+                f.flush()
+                raise OSError(28, "No space left on device")
+            f.write = half
+        return f
+
+    monkeypatch.setattr("longseries.store.open", flaky_open, raising=False)
+    with pytest.raises(OSError):
+        store.save("test-tso", "https://example.test/4", b"v4", now,
+                   http_status=200, headers={}, discovered_on="x", capture_id="c2")
+    monkeypatch.undo()
+    assert idx.read_bytes() == intact
+    assert len(store.versions("test-tso", "https://example.test/0")) == 1
+    store.save("test-tso", "https://example.test/5", b"v5", now,
+               http_status=200, headers={}, discovered_on="x", capture_id="c3")
+    assert len(store.versions("test-tso", "https://example.test/5")) == 1
+
+
+# ------------------------------------------------- concurrent writers (LS-2s)
+
+def test_a_concurrent_writer_cannot_publish_a_truncated_blob(store, now, monkeypatch):
+    """Two writers holding the same bytes used to share one deterministic
+    '<sha>.tmp'. A second writer killed mid-write left a PREFIX of the payload
+    there, which the first writer then os.replace()d into place under the full
+    content hash: a corrupt blob, reported as a clean 'new', never re-fetched."""
+    import longseries.store as store_mod
+    content = b"%PDF-1.4 " + b"x" * 4000
+    sha = hashlib.sha256(content).hexdigest()
+    path = store.blob_path("test-tso", sha)
+    real_fsync = store_mod.os.fsync
+
+    def sabotage(fd):
+        real_fsync(fd)
+        deterministic = path.with_name(path.name + ".tmp")
+        if deterministic.exists():   # the other writer reopened it and was SIGKILLed
+            deterministic.write_bytes(b"%PDF-trunc")
+
+    monkeypatch.setattr(store_mod.os, "fsync", sabotage)
+    cap = store.save("test-tso", "https://example.test/big.pdf", content, now,
+                     http_status=200, headers={}, discovered_on="x", capture_id="c1")
+    monkeypatch.undo()
+    assert cap.sha256 == sha
+    assert path.read_bytes() == content, "the blob must hash to the name it was filed under"
+    assert not list(path.parent.glob("*.tmp")), "no scratch file may be left where a writer can publish it"
+
+
+def test_an_existing_blob_is_never_replaced_by_a_second_writer(store, now):
+    content = b"same bytes"
+    sha = hashlib.sha256(content).hexdigest()
+    store.save("test-tso", "https://example.test/a", content, now, http_status=200, headers={}, discovered_on="x", capture_id="c1")
+    p = store.blob_path("test-tso", sha)
+    ino = p.stat().st_ino
+    store.save("test-tso", "https://example.test/b", content, now, http_status=200, headers={}, discovered_on="x", capture_id="c2")
+    assert p.stat().st_ino == ino, "an existing blob is not re-published, not even with identical bytes"
+
+
+# ------------------------------------------------- capture directory (LS-3s)
+
+def test_two_runs_in_the_same_second_do_not_share_a_capture_directory(store):
+    """_capture_id is second-precision. Two runs in one second used to write into
+    one directory: the second run's landing.html and manifest.json overwrote the
+    first run's, destroying the record of which alerts fired."""
+    first = store.claim_capture_dir("test-tso", "2026-09-01T120000Z")
+    second = store.claim_capture_dir("test-tso", "2026-09-01T120000Z")
+    assert first == "2026-09-01T120000Z"
+    assert second != first
+    store.write_snapshot("test-tso", first, "landing.html", b"<html>run one</html>")
+    store.write_manifest("test-tso", first, {"counts": {"new": 3}})
+    store.write_snapshot("test-tso", second, "landing.html", b"<html>run two</html>")
+    store.write_manifest("test-tso", second, {"counts": {"new": 0}})
+    assert store.read_manifest("test-tso", first) == {"counts": {"new": 3}}
+    assert (store.capture_dir("test-tso", first) / "landing.html").read_bytes() == b"<html>run one</html>"
+
+
+def test_poll_claims_its_own_capture_directory(config, store, site, landing_html, now):
+    import httpx
+    from longseries.adapter import BaseAdapter
+    site.set(config.landing_url, 200, landing_html.encode())
+    site.set("https://example.test/robots.txt", 404)
+    site.set("https://example.test/files/Netzanschluss_Kapazitaeten_2026-08.pdf", 200, b"%PDF-1.4 " + b"x" * 2000)
+    site.set("https://example.test/netz/anschluss/files/07_Anschluss_v2.xlsx", 200, b"PK\x03\x04" + b"y" * 2000)
+    a = BaseAdapter(config, store, transport=site.transport, sleeper=lambda s: None)
+    r1 = a.poll(now=now, capture_id="2026-09-01T120000Z")
+    r2 = a.poll(now=now, capture_id="2026-09-01T120000Z")
+    assert r1.capture_id != r2.capture_id
+    assert store.read_manifest(config.source_id, r1.capture_id)["counts"]["new"] == 3
+    assert store.read_manifest(config.source_id, r2.capture_id)["counts"]["unchanged"] == 3

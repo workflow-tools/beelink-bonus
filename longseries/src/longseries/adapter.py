@@ -161,8 +161,11 @@ class BaseAdapter:
     def poll(self, *, now: datetime | None = None, capture_id: str | None = None) -> RunResult:
         injected_clock = now is not None
         now = now or datetime.now(timezone.utc)
-        cid = capture_id or self._capture_id(now)
         sid = self.config.source_id
+        # Claim the directory before anything is written into it: it is what makes two
+        # runs starting in the same second two runs on disk instead of one overwritten
+        # record. The claimed id (possibly suffixed) is the run's id from here on.
+        cid = self.store.claim_capture_dir(sid, capture_id or self._capture_id(now))
         manifest: dict = {
             "capture_id": cid,
             "source_id": sid,

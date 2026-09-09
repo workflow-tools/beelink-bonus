@@ -12,10 +12,25 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+
+
+class IndexCorrupt(Exception):
+    """A line in index.jsonl is not a JSON object. Never skipped silently: a row
+    that cannot be read is a capture that cannot be accounted for, and the store
+    is the whole asset. `longseries repair` trims a TRAILING partial line (the
+    only damage a killed writer can leave); anything else is a human's job."""
+
+    def __init__(self, source_id: str, path: Path, lineno: int, detail: str):
+        super().__init__(f"{path}: line {lineno} is not valid JSON ({detail}). "
+                         f"Run `longseries repair` if it is a torn trailing line; do not edit blind.")
+        self.source_id = source_id
+        self.path = path
+        self.lineno = lineno
 
 
 class Disposition(str, Enum):
@@ -61,12 +76,27 @@ class ContentAddressedStore:
         if path.exists():
             return 0
         path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_name(path.name + ".tmp")
-        with open(tmp, "wb") as f:
-            f.write(content)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, path)
+        # The scratch name must be unique per writer. It used to be a pure function of
+        # the content hash, so two processes holding the same bytes shared one file:
+        # one of them killed mid-write left a PREFIX there, which the other then
+        # published under the full content hash — a corrupt blob reported as a clean
+        # capture. os.link (not os.replace) finalises, so an existing blob is never
+        # overwritten even under a race; the loser just returns 0.
+        tmp = path.with_name(f"{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp")
+        try:
+            with open(tmp, "wb") as f:
+                f.write(content)
+                f.flush()
+                os.fsync(f.fileno())
+            try:
+                os.link(tmp, path)
+            except FileExistsError:
+                return 0
+        finally:
+            try:
+                os.unlink(tmp)
+            except FileNotFoundError:
+                pass
         return len(content)
 
     def save(self, source_id: str, source_url: str, content: bytes, captured_at: datetime, *,
@@ -115,20 +145,64 @@ class ContentAddressedStore:
     def _append_index(self, source_id: str, record: dict) -> None:
         p = self.index_path(source_id)
         p.parent.mkdir(parents=True, exist_ok=True)
-        with open(p, "a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
-            f.flush()
-            os.fsync(f.fileno())
+        size = p.stat().st_size if p.exists() else 0
+        try:
+            with open(p, "a", encoding="utf-8") as f:
+                f.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
+        except BaseException:
+            # A half-written row poisons every later READ and every later WRITE of this
+            # source (save() reads the index first), over years of undamaged rows. Roll
+            # back to the last complete row before re-raising: the failed capture is
+            # lost, the archive is not.
+            try:
+                with open(p, "r+b") as f:
+                    f.truncate(size)
+                    f.flush()
+                    os.fsync(f.fileno())
+            except OSError:
+                pass
+            raise
 
     def _iter_index(self, source_id: str):
         p = self.index_path(source_id)
         if not p.exists():
             return
         with open(p, encoding="utf-8") as f:
-            for line in f:
+            for lineno, line in enumerate(f, start=1):
                 line = line.strip()
-                if line:
+                if not line:
+                    continue
+                try:
                     yield json.loads(line)
+                except json.JSONDecodeError as e:
+                    raise IndexCorrupt(source_id, p, lineno, str(e)) from e
+
+    def repair_index(self, source_id: str) -> int:
+        """Trim a TRAILING partial line and return the bytes removed. That is the
+        only damage a killed or out-of-space writer can leave. A corrupt line
+        anywhere else means something else happened; it is raised, never dropped."""
+        p = self.index_path(source_id)
+        if not p.exists():
+            return 0
+        raw = p.read_bytes()
+        lines = raw.split(b"\n")
+        trailing = lines.pop() if raw.endswith(b"\n") is False else b""
+        for lineno, line in enumerate(lines, start=1):
+            if not line.strip():
+                continue
+            try:
+                json.loads(line.decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                raise IndexCorrupt(source_id, p, lineno, str(e)) from e
+        if not trailing:
+            return 0
+        with open(p, "r+b") as f:
+            f.truncate(len(raw) - len(trailing))
+            f.flush()
+            os.fsync(f.fileno())
+        return len(trailing)
 
     def versions(self, source_id: str, source_url: str) -> list[dict]:
         """Every capture record for a URL, in append (chronological) order."""
@@ -149,10 +223,32 @@ class ContentAddressedStore:
         return latest
 
     # ------------------------------------------------------- snapshots
+    def claim_capture_dir(self, source_id: str, capture_id: str) -> str:
+        """Create the capture directory and return the capture id that was actually
+        claimed. The DIRECTORY is the uniqueness token: capture ids are precise to
+        the second, and two runs in one second used to write into one directory,
+        the second overwriting the first's landing.html and manifest.json — the
+        record of what the earlier run saw and which alerts it fired."""
+        base = self.source_dir(source_id) / "captures"
+        base.mkdir(parents=True, exist_ok=True)
+        for n in range(1, 1000):
+            cid = capture_id if n == 1 else f"{capture_id}.{n}"
+            try:
+                (base / cid).mkdir(exist_ok=False)
+                return cid
+            except FileExistsError:
+                continue
+        raise OSError(f"cannot claim a capture directory for {source_id} at {capture_id}")
+
     def write_snapshot(self, source_id: str, capture_id: str, name: str, content: bytes) -> str:
         d = self.capture_dir(source_id, capture_id)
         d.mkdir(parents=True, exist_ok=True)
-        (d / name).write_bytes(content)
+        tmp = d / f"{name}.{os.getpid()}.tmp"
+        with open(tmp, "wb") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, d / name)
         return sha256_hex(content)
 
     def write_manifest(self, source_id: str, capture_id: str, manifest: dict) -> None:

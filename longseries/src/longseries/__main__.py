@@ -29,11 +29,7 @@ def _load(path: str):
     """Load a source YAML. LONGSERIES_CONTACT and LONGSERIES_HEARTBEAT_URL in the
     environment override the file, so a real mailto: and a watchdog token never
     have to be committed."""
-    try:
-        c = load_source_config(path)
-    except ConfigError as e:
-        print(f"config error: {e}", file=sys.stderr)
-        sys.exit(1)
+    c = load_source_config(path)
     if os.environ.get("LONGSERIES_CONTACT"):
         c.contact = os.environ["LONGSERIES_CONTACT"]
     if os.environ.get("LONGSERIES_HEARTBEAT_URL"):
@@ -45,6 +41,22 @@ def cmd_validate(args) -> int:
     c = _load(args.source)
     print(json.dumps({k: (str(v) if k == "declared_cadence" else v) for k, v in c.__dict__.items()}, indent=2))
     return 0
+
+
+def _ping_config_failure(source: str, err: Exception, transport=None) -> bool:
+    """A config error is the one failure the per-source heartbeat cannot report from
+    the config, because the config is what is broken. Fall back to the environment
+    URL so the operator learns the reason within one interval instead of inferring
+    it from a check that goes stale a day later. Never raises."""
+    url = os.environ.get("LONGSERIES_HEARTBEAT_URL")
+    if not url:
+        return False
+    try:
+        Heartbeat(url, transport=transport).fail(f"config error in {source}: {err}")
+        return True
+    except Exception as e:  # never raise from the alert path — but say so, do not swallow silently
+        print(f"[schedule] watchdog ping failed: {e!r}", file=sys.stderr)
+        return False
 
 
 def cmd_poll(args) -> int:
@@ -82,23 +94,37 @@ def seconds_until_due(store: ContentAddressedStore, source_id: str, every_second
     return max(0.0, every_seconds - (now - last).total_seconds())
 
 
-def cmd_schedule(args) -> int:
+def cmd_schedule(args, *, sleeper=time.sleep, heartbeat_transport=None) -> int:
     """Poll on a fixed interval (default P1D). Polling more often than the
     declared cadence is cheap — the store writes zero bytes for unchanged files —
     and it bounds how late a change is noticed. Runs until stopped."""
     every = parse_cadence(args.every).total_seconds()
-    config = _load(args.source)
-    wait = seconds_until_due(ContentAddressedStore(Path(args.data)), config.source_id, every, datetime.now(timezone.utc))
-    if wait > 0:
-        print(f"[schedule] last capture is recent; first poll in {int(wait)}s", file=sys.stderr)
-        time.sleep(wait)
+    gated = False
     while True:
+        # Re-read the config every iteration. sources/ is a mounted volume, so an
+        # edited YAML takes effect on the next poll with no restart — that is the
+        # only repair channel a relocated operator has. It also means a bad edit
+        # must not be fatal: a ConfigError here loops and retries rather than
+        # exiting into a restart loop that never pings anything.
+        try:
+            config = _load(args.source)
+        except ConfigError as e:
+            pinged = _ping_config_failure(args.source, e, heartbeat_transport)
+            print(f"[schedule] config error: {e}; watchdog {'notified' if pinged else 'NOT notified (no LONGSERIES_HEARTBEAT_URL)'}; retrying in {int(every)}s", file=sys.stderr)
+            sleeper(every)
+            continue
+        if not gated:
+            wait = seconds_until_due(ContentAddressedStore(Path(args.data)), config.source_id, every, datetime.now(timezone.utc))
+            gated = True
+            if wait > 0:
+                print(f"[schedule] last capture is recent; first poll in {int(wait)}s", file=sys.stderr)
+                sleeper(wait)
         try:
             rc = cmd_poll(args)
             print(f"[schedule] poll finished rc={rc}; sleeping {int(every)}s", file=sys.stderr)
         except Exception as e:  # a crash must not stop the schedule; the missing heartbeat has already fired
             print(f"[schedule] poll crashed: {e!r}; sleeping {int(every)}s", file=sys.stderr)
-        time.sleep(every)
+        sleeper(every)
 
 
 def cmd_extract(args) -> int:
@@ -153,7 +179,11 @@ def main(argv: list[str] | None = None) -> int:
             sp.add_argument("--json", action="store_true")
         sp.set_defaults(fn=fn)
     args = p.parse_args(argv)
-    return args.fn(args)
+    try:
+        return args.fn(args)
+    except ConfigError as e:
+        print(f"config error: {e}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

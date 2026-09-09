@@ -43,7 +43,18 @@ services:
     command: ["schedule", "/sources/amprion.yaml", "--data", "/data", "--every", "P1D"]
     volumes:
       - ./sources:/sources:ro
-      - ${LONGSERIES_DATA:-./data}:/data
+      # create_host_path: false — if the data root is not there, Docker must REFUSE
+      # to invent an empty directory for it. An unmounted root is indistinguishable
+      # from a fresh install: every document is re-captured as NEW, no staleness
+      # alarm can fire (they are all gated on there being a history), the watchdog
+      # goes green, and the captures written under the mountpoint are shadowed the
+      # moment the real disk comes back. Run `mkdir -p ./data` (or point
+      # LONGSERIES_DATA at the real disk) before the first `up`.
+      - type: bind
+        source: ${LONGSERIES_DATA:-./data}
+        target: /data
+        bind:
+          create_host_path: false
 
   transnetbw:
     <<: *collector
@@ -54,7 +65,18 @@ services:
     command: ["schedule", "/sources/transnetbw.yaml", "--data", "/data", "--every", "P1D"]
     volumes:
       - ./sources:/sources:ro
-      - ${LONGSERIES_DATA:-./data}:/data
+      # create_host_path: false — if the data root is not there, Docker must REFUSE
+      # to invent an empty directory for it. An unmounted root is indistinguishable
+      # from a fresh install: every document is re-captured as NEW, no staleness
+      # alarm can fire (they are all gated on there being a history), the watchdog
+      # goes green, and the captures written under the mountpoint are shadowed the
+      # moment the real disk comes back. Run `mkdir -p ./data` (or point
+      # LONGSERIES_DATA at the real disk) before the first `up`.
+      - type: bind
+        source: ${LONGSERIES_DATA:-./data}
+        target: /data
+        bind:
+          create_host_path: false
 
   fiftyhertz:
     <<: *collector
@@ -65,4 +87,15 @@ services:
     command: ["schedule", "/sources/50hertz.yaml", "--data", "/data", "--every", "P1D"]
     volumes:
       - ./sources:/sources:ro
-      - ${LONGSERIES_DATA:-./data}:/data
+      # create_host_path: false — if the data root is not there, Docker must REFUSE
+      # to invent an empty directory for it. An unmounted root is indistinguishable
+      # from a fresh install: every document is re-captured as NEW, no staleness
+      # alarm can fire (they are all gated on there being a history), the watchdog
+      # goes green, and the captures written under the mountpoint are shadowed the
+      # moment the real disk comes back. Run `mkdir -p ./data` (or point
+      # LONGSERIES_DATA at the real disk) before the first `up`.
+      - type: bind
+        source: ${LONGSERIES_DATA:-./data}
+        target: /data
+        bind:
+          create_host_path: false

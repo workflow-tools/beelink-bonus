@@ -1,0 +1,87 @@
+# Screened 2026-09-09. Evidence and tags live in the dossier, not here.
+id: college-admissions-fine-print
+title: US college admissions conditional fine print and merit-aid grids
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-09'
+screened_with: vanishing-data-prospector v2 (workflow-tools/patterns@claude/keen-einstein-03b947, 2026-09-09)
+dossiers:
+  - workflow-tools/patterns docs/research/2026-09-09-vanishing-data-dossier-college-admissions.md
+  - workflow-tools/patterns docs/research/2026-09-03-vanishing-data-dossier-higher-ed-web-claims.md (the prior KILL; IPEDS and litigator buyers established there)
+history:
+  - date: '2026-09-03'
+    status: killed
+    note: 'First screen, as higher-education web claims: KILL at station 2. Institutional statistics are
+      a free federal panel; the three nameable buyers were plaintiff firms using free Wayback captures'
+  - date: '2026-09-09'
+    status: option
+    note: 'Re-screened as admissions data with the IEC as buyer. The standalone data product is KILLED
+      again at station 2a (IECs buy outcome history, not policy history); two signals do vanish cleanly,
+      and ride-along collection is registered as an OPTION justified by its near-zero premium, not by
+      a buyer'
+collector:
+  built: false
+  sources: []
+  how_to_build: 'NOT the longseries chassis. This rides inside the Upskill News content pipeline, which
+    already fetches these pages to generate newsletter content: add a snapshot-on-fetch step that stores
+    URL, fetch timestamp, etag/last-modified, raw body and content hash to Supabase, dated and immutable.
+    A schema change and an insert, ~3 h. Then ~40 merit auto-award grid pages (~3 h) and the testing
+    fine-print pages (~4 h) added to whatever that pipeline already polls. Collection remote and always
+    (the Vercel cron or a scheduled GitHub Action); structuring the prose into fields is Beelink work
+    and may lag by days. Total 10-12 h. If the pipeline turns out NOT to fetch live pages, this becomes
+    a separate project and must be re-screened.'
+stations:
+  - station: 0 refusals
+    result: 'PASS with one recorded decision: the WGU constraint is satisfied by collecting broadly now and filtering at use time (owner, 2026-09-09). Not re-litigated'
+    tag: n/a
+  - station: 1 archive falsification
+    result: 'Most signals ARCHIVED and therefore killed: IPEDS back to 1980-81; College Transitions'' free CDS repository; FairTest''s chronology PDFs (frozen at last-modified 2022-08-26, so the risk is deletion not silent edit); SHEEO closures from 2004; CollegeCuts ships a dated public JSON API for programme cuts, which is an incumbent kill. TWO signals vanish cleanly with no publisher and no third-party archive: conditional testing fine print per institution, and merit auto-award grids'
+    tag: HIGH
+  - station: 2a buyers now
+    result: 'FAIL. No organisation found whose budgeted decision turns on the historical value of a testing policy. IECs demonstrably buy outcome history (College Kickstart) not policy history. This is what kills the standalone data product'
+    tag: HIGH
+  - station: 2b buyers later
+    result: 'Clears at most one of three tests and needs two. No dated instance of anyone paying for a policy-history series anywhere. The option is NOT justified by a future buyer — it is justified only by the near-zero premium of riding an existing fetch'
+    tag: HIGH
+  - station: 3 churn and durability
+    result: 'Merit grids churn annually as thresholds move with enrolment targets. Conditional fine print churns per admission cycle. Not run in detail'
+    tag: MED
+  - station: 4 licence
+    result: 'not run. US institutional pages, no licence analysis performed. Derived facts only under the standing rule; a US station-4 analysis is required before anything is sold, and no references/legal-us.md exists'
+    tag: LOW
+  - station: 5 objection and withdrawal
+    result: 'Withdrawal-in-reverse is the live risk: Compass or College Transitions publishing a versioned panel, or IPEDS federalising deadlines and waitlist counts, would close the gap. Subject objection nil — institutions, not people'
+    tag: MED
+  - station: 6 validation
+    result: 'Option mode. The wedge is newsletter content, not the archive'
+    tag: n/a
+future_question: What did this school's fine print actually say when my student applied — did the scholarship require a score that year, was the homeschool carve-out there, did the per-major rule exist?
+buyers_now: []
+buyers_later:
+  - who: Nobody evidenced
+    note: 'Stated plainly because the register should not flatter itself. Station 2b did not clear. The collection is justified by its cost being near zero, not by a buyer'
+    tag: HIGH
+premium:
+  setup_hours: 10-12
+  eur_per_month: 0-3
+  note: 'Only true if the Upskill News content pipeline already fetches live per-school pages. If it generates from model knowledge instead, this is a separate project needing its own station 2a — see owner_checks'
+wedge: Newsletter content on the day of capture ("Alabama's 3.5 tier moved this cycle"), and later a change-detection feature — what changed for your student's list since junior year began
+kill_criteria:
+  - Compass Education Group or College Transitions publishes a versioned panel of testing policies or merit criteria
+  - Any institution exposes a policy changelog or dated prior versions of its admissions pages
+  - A funded party starts publishing the same dated series
+  - The Upskill News content pipeline stops fetching those pages, or turns out never to have fetched them
+  - IPEDS confirms an Admissions "Part E" federalising waitlist counts and ED/EA dates (currently unverified and tagged LOW)
+  - Nothing has changed in the captured payload after 90 days of daily polls
+review_date: '2027-09-09'
+review_note: 'Brought forward if IPEDS Part E is confirmed, or if the pipeline question below resolves against the near-zero premium'
+route: portfolio
+ceiling:
+  value: 'None as a data product. The collection has no standalone ceiling because station 2a failed; its value is a product feature and free optionality'
+  tag: HIGH
+owner_checks:
+  - Confirm whether the Upskill News content pipeline fetches live per-school pages or generates from model knowledge. This single answer decides whether the premium above is real
+  - Run archive-probe.mjs from the Beelink against the FairTest PDFs, the merit-grid pages, and thecollegeadvisor.net/consultants (web.archive.org is blocked from agent containers)
+  - Pull the IPEDS 2025-26 Data Provider instructions in a browser and settle whether an Admissions "Part E" exists
+  - A US station-4 licence analysis before anything derived from this is sold; no references/legal-us.md exists yet

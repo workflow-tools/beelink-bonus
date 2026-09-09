@@ -48,3 +48,18 @@ def test_validate_does_not_print_the_watchdog_token(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "SECRET-TOKEN" not in out
     assert "hc-ping.com" in out, "the operator still needs to see that one is configured, and which host"
+
+
+def test_show_survives_a_capture_that_has_no_manifest(tmp_path, capsys):
+    """LS-7u: PID 1 is python with no SIGTERM handler, so `docker stop` SIGKILLs
+    it 10 s later — landing on a poll leaves a capture directory with no
+    manifest.json. cmd_show read caps[-1] unconditionally and raised
+    FileNotFoundError: the one command an operator runs to check on a collector."""
+    store = ContentAddressedStore(tmp_path / "data")
+    store.write_manifest("test-tso", "2026-09-01T120000Z", {"counts": {"new": 2}, "failed": False})
+    store.claim_capture_dir("test-tso", "2026-09-02T120000Z")  # killed mid-poll
+    assert main(["show", _source(tmp_path), "--data", str(tmp_path / "data")]) == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["latest"] == "2026-09-01T120000Z"
+    assert out["counts"] == {"new": 2}
+    assert "2026-09-02T120000Z" in json.dumps(out), "the incomplete capture must be named, not hidden"

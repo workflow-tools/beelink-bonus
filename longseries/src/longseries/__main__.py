@@ -86,21 +86,43 @@ def cmd_poll(args) -> int:
     return 3 if run.alerts else 0
 
 
+def _capture_time(name: str) -> datetime | None:
+    """Parse a capture directory name, tolerating the '.2' a same-second collision
+    appends. Returns None for anything that is not one of ours."""
+    try:
+        return datetime.strptime(name.split(".")[0], "%Y-%m-%dT%H%M%SZ").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
 def seconds_until_due(store: ContentAddressedStore, source_id: str, every_seconds: float, now: datetime) -> float:
     """How long to wait before the first poll after a (re)start. A container in a
     restart loop must not hammer the publisher: if the latest capture is younger
-    than the interval, wait out the remainder."""
+    than the interval, wait out the remainder.
+
+    Two ways this gate used to switch itself off. It took sorted(names)[-1] and
+    returned 0.0 when that would not parse — and any name beginning with a letter
+    ('backup-before-rsync') sorts after every 2026-… timestamp, so one stray
+    directory disabled the gate permanently. And it clamped only the lower bound,
+    so one future-dated capture (a dead CMOS cell's BIOS default is 2099) slept the
+    collector for 26,420 days, across restarts. Now: the newest name that actually
+    parses and is not in the future decides, the wait is clamped to the interval at
+    both ends, and 'no idea' waits rather than polls."""
     d = store.source_dir(source_id) / "captures"
     if not d.exists():
         return 0.0
     names = sorted(p.name for p in d.iterdir() if p.is_dir())
     if not names:
         return 0.0
-    try:
-        last = datetime.strptime(names[-1], "%Y-%m-%dT%H%M%SZ").replace(tzinfo=timezone.utc)
-    except ValueError:
-        return 0.0
-    return max(0.0, every_seconds - (now - last).total_seconds())
+    for name in reversed(names):
+        last = _capture_time(name)
+        if last is None or last > now:
+            continue
+        return min(every_seconds, max(0.0, every_seconds - (now - last).total_seconds()))
+    # Captures exist but none of them can be believed: fail CLOSED. Polling now is
+    # the behaviour a crash loop turns into a request flood at the publisher.
+    print(f"[schedule] no usable capture timestamp in {d}; waiting a full interval", file=sys.stderr)
+    return every_seconds
 
 
 def cmd_schedule(args, *, sleeper=time.sleep, heartbeat_transport=None) -> int:
@@ -184,8 +206,19 @@ def cmd_show(args) -> int:
     if not caps:
         print("no captures yet")
         return 0
-    m = store.read_manifest(config.source_id, caps[-1])
-    print(json.dumps({"captures": len(caps), "latest": caps[-1], "counts": m.get("counts"), "failed": m.get("failed"),
+    # A capture directory with no manifest is what a killed poll leaves (PID 1 has no
+    # SIGTERM handler, so `docker stop` SIGKILLs it 10 s later). Reading caps[-1]
+    # unconditionally made the one command an operator runs to check on a collector
+    # the one that raises. Fall back to the newest complete capture and say so.
+    incomplete = [c for c in caps if not (store.capture_dir(config.source_id, c) / "manifest.json").exists()]
+    complete = [c for c in caps if c not in incomplete]
+    if not complete:
+        print(json.dumps({"captures": len(caps), "latest": None, "incomplete_captures": incomplete,
+                          "note": "no capture has a manifest; every run so far was interrupted"}, indent=2))
+        return 0
+    m = store.read_manifest(config.source_id, complete[-1])
+    print(json.dumps({"captures": len(caps), "latest": complete[-1], "incomplete_captures": incomplete,
+                      "counts": m.get("counts"), "failed": m.get("failed"),
                       "alerts": m.get("alerts"), "landing_status": m.get("landing_status"),
                       "last_change_at": (store.last_change_at(config.source_id) or "never") and str(store.last_change_at(config.source_id))}, indent=2))
     return 0

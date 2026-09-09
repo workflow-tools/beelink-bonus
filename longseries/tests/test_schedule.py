@@ -163,3 +163,43 @@ def test_schedule_survives_a_config_failure_that_is_not_a_config_error(tmp_path,
                      sleeper=sleeper, heartbeat_transport=transport)
     assert len(calls) == 2, "the loop must retry, not exit into `restart: unless-stopped`"
     assert all(u.endswith("/fail") for u, _ in seen) and len(seen) == 2
+
+
+# --- the restart-loop gate must not be disabled by a stray directory ----------
+
+def test_a_future_dated_capture_cannot_sleep_the_collector_for_years(tmp_path):
+    """LS-3u: only the lower bound was clamped. A capture dated 2099 (a dead CMOS
+    cell's BIOS default) returned 26,420 days, and restarting did not fix it."""
+    store = ContentAddressedStore(tmp_path)
+    now = datetime(2026, 9, 3, 12, 0, 0, tzinfo=timezone.utc)
+    for delta in (timedelta(days=1), timedelta(days=2)):
+        store.capture_dir("s", (now - delta).strftime("%Y-%m-%dT%H%M%SZ")).mkdir(parents=True)
+    store.capture_dir("s", "2099-01-01T000000Z").mkdir(parents=True)
+    assert seconds_until_due(store, "s", 86400, now) <= 86400
+
+
+def test_an_unparseable_capture_name_does_not_disable_the_gate(tmp_path):
+    """M-1: any name starting with a letter sorts after every 2026-… timestamp, so
+    names[-1] picked it, strptime raised, and the gate returned 0.0 — the
+    withdrawal-risk mitigation that keeps a crash-looping container off the
+    publisher was silently off from then on."""
+    store = ContentAddressedStore(tmp_path)
+    now = datetime(2026, 9, 3, 12, 0, 0, tzinfo=timezone.utc)
+    store.capture_dir("s", (now - timedelta(minutes=10)).strftime("%Y-%m-%dT%H%M%SZ")).mkdir(parents=True)
+    (store.source_dir("s") / "captures" / "backup-before-rsync").mkdir()
+    assert 2990 <= seconds_until_due(store, "s", 3600, now) <= 3010
+
+
+def test_only_unparseable_capture_names_fail_closed(tmp_path):
+    store = ContentAddressedStore(tmp_path)
+    (store.source_dir("s") / "captures").mkdir(parents=True)
+    (store.source_dir("s") / "captures" / "backup-before-rsync").mkdir()
+    assert seconds_until_due(store, "s", 3600, datetime.now(timezone.utc)) == 3600
+
+
+def test_a_collision_suffixed_capture_id_still_parses(tmp_path):
+    store = ContentAddressedStore(tmp_path)
+    now = datetime(2026, 9, 3, 12, 0, 0, tzinfo=timezone.utc)
+    store.claim_capture_dir("s", (now - timedelta(minutes=10)).strftime("%Y-%m-%dT%H%M%SZ"))
+    store.claim_capture_dir("s", (now - timedelta(minutes=10)).strftime("%Y-%m-%dT%H%M%SZ"))
+    assert 2990 <= seconds_until_due(store, "s", 3600, now) <= 3010

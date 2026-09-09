@@ -16,6 +16,17 @@ x-collector: &collector
   build: .
   image: longseries:local
   restart: unless-stopped
+  # PID 1 is python, which has no SIGTERM handler, and the kernel DISCARDS SIGTERM
+  # sent to PID 1: every `docker stop` stalled 10 s and then SIGKILLed. Landing that
+  # inside a poll leaves a capture directory with no manifest. tini forwards signals.
+  init: true
+  # A crash loop writes a log line per iteration forever; the default json-file
+  # driver has no ceiling and the host disk is the archive.
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
   env_file:
     - path: .env
       required: false

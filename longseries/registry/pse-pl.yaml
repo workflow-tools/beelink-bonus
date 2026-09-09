@@ -1,0 +1,86 @@
+# Screened 2026-09-09 in the international grid-capacity hunt. Evidence in the dossier.
+# A sibling of the German Schaltfeld series on the same chassis, not a separate business.
+id: pse-pl-moc-przylaczeniowa
+title: PSE - Polish transmission available connection capacity (monthly PDF)
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-09'
+screened_with: vanishing-data-prospector v2 (international rank-and-register pass, 2026-09-09)
+dossiers:
+- workflow-tools/patterns docs/research/2026-09-09-vanishing-data-dossier-grid-capacity-worldwide.md
+history:
+- date: '2026-09-09'
+  status: option
+  note: Option on the shared chassis. Collection is remote and trivial; extraction is a Beelink batch
+    job - the documented remote/local split.
+collector:
+  built: false
+  sources: []
+  how_to_build: Landing-only source. Conditional GET on the fixed URL https://www.pse.pl/documents/20182/51490/informacja_o_dostepnosci_mocy_przylaczeniowej_do_sieci_przesylowej.pdf
+    keyed on Last-Modified (observed Mon, 31 Aug 2026 16:48:44 GMT; 1,113,716 bytes). Store the PDF bytes
+    plus headers; table extraction runs LOCAL on the Beelink, days later. ~2 hours remote.
+stations:
+  s1_archive:
+    result: PASS
+    tag: HIGH
+    note: 'Landing page carries exactly ONE file link, the current PDF at a fixed URL overwritten in place
+      (verified 2026-09-09). The site does run an Archiwum - for capacity-market auctions (Aukcja glowna
+      na rok dostaw 2027 etc.), never for this document: the archive-for-the-wrong-document trap, checked
+      and excluded. Coverage map NOT built: web.archive.org blocked - owner runs archive-probe.mjs from
+      the Beelink.'
+  s2b_buyers_later:
+    result: PASS 2/3
+    tag: MED
+    note: 'Disputed: Polish connection refusals (odmowa) are the most litigated in the EU and turn on
+      what capacity was published at application date. Traded: PL storage pipelines change hands with
+      the connection as the asset. Comparable: GridTracker [MED].'
+  s3_churn:
+    result: PASS
+    tag: HIGH
+    note: 'CORRECTED from the lane report: the statutory floor is quarterly, quoted verbatim - "PSE S.A.
+      jest zobowiazany aktualizowac powyzsze informacje co najmniej raz na kwartal". Observed practice
+      is faster (Last-Modified 2026-08-31, document stamped STAN NA 31 SIERPNIA 2026). Record both.'
+  s4_licence:
+    result: NOT RUN
+    tag: n/a
+    note: No licence statement located. Derived facts only; never redistribute the PDF.
+  s5_withdrawal:
+    result: PASS with named risks
+    tag: MED
+    note: Withdrawal in reverse is live - Polish law already extends the same duty to 110 kV DSOs, and
+      a regulator building a national platform could mandate retention. energyai.pl already mirrors PGE's
+      equivalent PDF under capture-dated filenames [MED] - the closest thing to a funded third party in
+      this whole hunt; check whether it extends to PSE.
+  s6_validation:
+    result: option mode, not started
+    tag: n/a
+future_question: Jaka moc przylaczeniowa byla publikowana dla stacji X w miesiacu naszego wniosku, zanim
+  otrzymalismy odmowe?
+buyers_now: []
+buyers_later:
+- type: Polish BESS and PV developers, and law firms running connection-refusal appeals
+  evidence: Refusal volume and the statutory publication duty make the published-at-the-time figure the
+    contested fact
+  tag: MED
+premium:
+  setup_hours: 2
+  monthly_eur: 1
+  note: Remote collection only. PDF table extraction is local Beelink batch, excluded from the premium.
+wedge: A monthly diff of the PSE station table (which stations gained or lost capacity) published as a
+  derived table without naming the endpoint; offer to two Polish developers.
+kill_criteria:
+- PSE publishes dated prior editions, or the URL gains a date segment with prior files retained
+- energyai.pl or another funded party starts mirroring PSE's PDF under capture-dated filenames
+- URE or a national platform mandates central publication with retention
+- The PDF moves behind a login or a portal
+- Last-Modified does not move for two consecutive quarters
+- Nobody has used the wedge by the review date
+review_date: '2027-09-09'
+route: portfolio
+ceiling:
+  tag: LOW
+  note: Validation unit on the shared chassis.
+owner_checks:
+- archive-probe.mjs probe on the PSE documents path
+- Check whether energyai.pl mirrors PSE as well as PGE, and on what cadence

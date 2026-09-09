@@ -1,0 +1,78 @@
+# Screened 2026-09-09 in the international grid-capacity hunt. Evidence in the dossier.
+# A sibling of the German Schaltfeld series on the same chassis, not a separate business.
+id: ceps-cz-dostupna-kapacita
+title: CEPS - Czech transmission available connection capacity map and table
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-09'
+screened_with: vanishing-data-prospector v2 (international rank-and-register pass, 2026-09-09)
+dossiers:
+- workflow-tools/patterns docs/research/2026-09-09-vanishing-data-dossier-grid-capacity-worldwide.md
+history:
+- date: '2026-09-09'
+  status: option
+  note: Option on the shared chassis, not a business. Server-rendered table, monthly, non-binding.
+collector:
+  built: false
+  sources: []
+  how_to_build: Landing-only source. GET https://www.ceps.cz/cs/mapa-dostupne-kapacity-pro-pripojeni-k-ps
+    and parse the server-rendered HTML table (station name, reserved/available values) plus the "Informace
+    jsou aktualni k &lt;date&gt;" stamp. No login, no JS. The 2031 and 2036 horizon maps are a second
+    series from the same fetch. ~3 hours.
+stations:
+  s1_archive:
+    result: PASS
+    tag: HIGH
+    note: 'Zero hits for archiv / predchoz / histori on the fetched page (2026-09-09); no prior-edition
+      link or version picker. Sibling trap checked: cezdistribuce.cz runs a real dated archive for the
+      Distribution System Operation Rules (PPDS), a different document, correctly excluded. Coverage map
+      NOT built: web.archive.org blocked - owner runs archive-probe.mjs from the Beelink.'
+  s2b_buyers_later:
+    result: PASS 2/3
+    tag: MED
+    note: 'Disputed/traded: Czech connection queue and data-centre siting. Comparable: GridTracker [MED].
+      Leading indicators not re-derived this pass.'
+  s3_churn:
+    result: PASS
+    tag: HIGH
+    note: Quoted verbatim from the page - "Mapy jsou pripravovany s mesicni aktualizaci a poskytuji pouze
+      orientacni informace a nezarucuji rezervaci kapacity"; stamp "Informace jsou aktualni k 1. 9. 2026".
+      Monthly, explicitly orientational and non-reserving.
+  s4_licence:
+    result: NOT RUN
+    tag: n/a
+    note: No licence statement located. Derived facts only.
+  s5_withdrawal:
+    result: PASS with named risks
+    tag: MED
+    note: Subject objection nil. Withdrawal in reverse via the EU single-national-platform recommendation
+      (C/2025/6703) and ERU.
+  s6_validation:
+    result: option mode, not started
+    tag: n/a
+future_question: Jakou dostupnou kapacitu mapa CEPS uvadela pro lokalitu X v mesici naseho podani?
+buyers_now: []
+buyers_later:
+- type: Czech and cross-border developers, plus consultancies siting data centres on the DE/AT/PL loop
+  evidence: Monthly cadence plus 2031/2036 horizon maps make the trajectory, not just the level, the decision
+    input
+  tag: MED
+premium:
+  setup_hours: 3
+  monthly_eur: 1
+wedge: Monthly diff of the CEPS locality table plus the horizon-map delta (what moved between the 2031
+  and 2036 views); offer free to two developers.
+kill_criteria:
+- CEPS publishes dated prior editions or a version picker
+- ERU or a national platform mandates central publication with retention
+- The table moves behind a JS-only render or a login
+- Two consecutive monthly stamps with no value change at any locality
+- Nobody has used the wedge by the review date
+review_date: '2027-09-09'
+route: portfolio
+ceiling:
+  tag: LOW
+  note: Validation unit on the shared chassis.
+owner_checks:
+- archive-probe.mjs probe on ceps.cz

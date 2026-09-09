@@ -1,0 +1,87 @@
+# Screened 2026-09-09 in the international grid-capacity hunt. Evidence in the dossier.
+# A sibling of the German Schaltfeld series on the same chassis, not a separate business.
+id: kapacitetskort-dk-ledige-felter
+title: Energinet kapacitetskort.dk - Danish free-bays (ledige felter) capacity map
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-09'
+screened_with: vanishing-data-prospector v2 (international rank-and-register pass, 2026-09-09)
+dossiers:
+- workflow-tools/patterns docs/research/2026-09-09-vanishing-data-dossier-grid-capacity-worldwide.md
+history:
+- date: '2026-09-09'
+  status: option
+  note: Structural twin of the German Schaltfeld series (the payload field is literally available_fields_for_publication_capacitymap).
+    An option on the shared chassis, never a business.
+collector:
+  built: false
+  sources: []
+  how_to_build: Landing-only source, no code change beyond a JSON path. GET https://services7.arcgis.com/an1TuZOdFp9M3PVx/arcgis/rest/services/Kapacitetskortet_V2/FeatureServer/2/query?where=1%3D1&outFields=*&f=json
+    (layer 2 TSO_stations_fields_points; also layer 4 polygons, layers 1/5 DSO). No login, no JS. Record
+    both publication_date / updated_date_for_number_of_fields from the payload AND the layer's dataLastEditDate
+    from the FeatureServer metadata - they disagree, and that disagreement is the artefact. ~2 hours.
+stations:
+  s1_archive:
+    result: PASS
+    tag: HIGH
+    note: 'Confirmed at the API level, not by absence of a link: service hasVersionedData=False; layer
+      2 isDataVersioned=False, archivingInfo=None, supportsQueryWithHistoricMoment=None, capabilities=Query
+      only (queried 2026-09-09). Edits overwrite in place; dataLastEditDate 2026-09-03. Coverage map NOT
+      built: web.archive.org blocked - owner runs archive-probe.mjs from the Beelink.'
+  s2b_buyers_later:
+    result: PASS 2/3
+    tag: MED
+    note: 'Comparable: GridTracker sells US interconnection-queue history on a paid tier [MED]. Disputed/traded:
+      Danish PtX and data-centre siting decisions turn on which station had free bays when. Leading indicators
+      not re-derived this pass.'
+  s3_churn:
+    result: PARTIAL
+    tag: HIGH
+    note: Original 2021 commitment was every six months; the live item states the TSO part is not expected
+      to update before early Q4 2026 while sample rows sit at publication_date 2026-04-01. Slow churn,
+      but the whole point is that the stale state is itself undocumented.
+  s4_licence:
+    result: NOT RUN
+    tag: n/a
+    note: Non-binding disclaimer sits in the Web Map item's licenseInfo ("viser et oejebliksbillede ...
+      maa paa ingen maade tolkes som en forpligtigelse"). No re-use licence located. Derived facts only.
+  s5_withdrawal:
+    result: PASS with named risks
+    tag: MED
+    note: 'Subject objection nil. Withdrawal in reverse is the named risk: a December 2025 Danish executive
+      order already obliges network companies to provide a digital map solution [MED], and a regulator
+      that mandates the map can mandate its retention next.'
+  s6_validation:
+    result: option mode, not started
+    tag: n/a
+future_question: Hvor mange ledige felter viste kapacitetskortet for station X den dag vi ansoegte?
+buyers_now: []
+buyers_later:
+- type: Danish PtX, storage and data-centre developers; lenders doing connection diligence
+  evidence: Free-bay counts per station are the binding constraint on siting; the map is the only published
+    source and it is a snapshot
+  tag: MED
+premium:
+  setup_hours: 2
+  monthly_eur: 1
+wedge: Free-bay change alerts per station plus the consolidated DE+DK bays table (same schema, two countries);
+  offer free to two Danish developers.
+kill_criteria:
+- Energinet enables versioning or archiving on the Feature Service (isDataVersioned or archivingInfo becomes
+  non-null), or ships a history endpoint
+- Energinet or the Danish regulator publishes dated prior editions of the capacity map
+- The Feature Service moves behind a token, a login, or an app-only route
+- 'The series stops changing: two consecutive publication_date values with no transition at any station'
+- A funded party publishes the dated Danish series
+- Nobody has used the wedge by the review date
+review_date: '2027-09-09'
+review_note: Bring forward to Q4 2026 - the publisher has stated the TSO half refreshes then, which is
+  the first observable transition.
+route: portfolio
+ceiling:
+  tag: LOW
+  note: Validation unit. Its value is schema reuse with the German series, not standalone revenue.
+owner_checks:
+- archive-probe.mjs probe on kapacitetskort.dk and the services7.arcgis.com layer URLs
+- Read the December 2025 Danish executive order (bekendtgoerelse) for any retention duty

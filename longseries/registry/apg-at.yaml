@@ -1,0 +1,85 @@
+# Screened 2026-09-09 in the international grid-capacity hunt. Evidence in the dossier.
+# A sibling of the German Schaltfeld series on the same chassis, not a separate business.
+id: apg-at-netzanschlusskapazitaeten
+title: APG - Austrian TSO available connection capacity table (monthly, Stand-stamped)
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-09'
+screened_with: vanishing-data-prospector v2 (international rank-and-register pass, 2026-09-09)
+dossiers:
+- workflow-tools/patterns docs/research/2026-09-09-vanishing-data-dossier-grid-capacity-worldwide.md
+history:
+- date: '2026-09-09'
+  status: option
+  note: 'Option on the shared chassis. Same legal basis, same German vocabulary and the same Stand: convention
+    as the existing German TSO series - the same parser family, not a new build.'
+collector:
+  built: false
+  sources: []
+  how_to_build: 'Landing-only source. GET https://markt.apg.at/netz/netzanschluss/netzanschlusskapazitaeten/
+    and parse the server-rendered table (Umspannwerk, Bundesland, Verfuegbare Einspeisekapazitaet, Verfuegbare
+    Bezugskapazitaet, flexible Anschlussmoeglichkeit) plus the "Stand: &lt;date&gt;" stamp. No login,
+    no JS. ~2 hours.'
+stations:
+  s1_archive:
+    result: PASS
+    tag: HIGH
+    note: 'Zero hits for archiv / fruehere / vorherige / aeltere / historisch / vergangen on the fetched
+      page (2026-09-09); the only file link is an unrelated ANB PDF. Sibling trap checked: APG''s transparency
+      section does archive other series (intraday capacities, NTC) but not this one. Coverage map NOT
+      built: web.archive.org blocked - owner runs archive-probe.mjs from the Beelink.'
+  s2b_buyers_later:
+    result: PASS 2/3
+    tag: MED
+    note: 'Same buyer shape as the German series (developers, lenders, consultancies) in an adjacent market
+      with the same language. Comparable: GridTracker [MED].'
+  s3_churn:
+    result: PASS
+    tag: HIGH
+    note: 'Quoted verbatim - "verpflichtet, Informationen ueber die verfuegbaren Netzanschlusskapazitaeten
+      zu veroeffentlichen und diese monatlich zu aktualisieren"; stamp "Stand: 1. August 2026", still
+      showing on 2026-09-09, so the September edition is late. Lateness is itself a collectable fact that
+      only a collector can evidence.'
+  s4_licence:
+    result: NOT RUN
+    tag: n/a
+    note: No licence statement located. Non-binding framing. Derived facts only.
+  s5_withdrawal:
+    result: PASS with named risks
+    tag: MED
+    note: 'Withdrawal in reverse via E-Control and the EU single-national-platform recommendation. Related
+      risk observed: Austria''s joint operator platform ebUtilities.at is login-gated (bundle exposes
+      only /api/auth/login and /api/auth/logout; data routes 401), so a migration of APG''s table onto
+      that platform would end open collection.'
+  s6_validation:
+    result: option mode, not started
+    tag: n/a
+future_question: Welche verfuegbare Einspeisekapazitaet wies die APG-Tabelle fuer Umspannwerk X am Tag
+  unseres Antrags aus?
+buyers_now: []
+buyers_later:
+- type: Austrian and cross-border developers, lenders and grid-connection consultancies
+  evidence: Monthly statutory cadence under the same EU rule as the German series; same decision shape
+  tag: MED
+premium:
+  setup_hours: 2
+  monthly_eur: 1
+wedge: Per-Umspannwerk change alert across DE and AT in one table (same language, same schema); offer
+  free to one Austrian developer and one consultancy already near the German wedge.
+kill_criteria:
+- APG publishes dated prior editions, an "aeltere Ausgaben" list, or a version picker
+- APG's table migrates onto the login-gated ebUtilities.at platform
+- E-Control or a national platform mandates central publication with retention
+- 'The series stops changing: two consecutive Stand dates with no value change at any Umspannwerk'
+- Nobody has used the wedge by the review date
+review_date: '2027-09-09'
+review_note: Bring forward if the missing September 2026 edition does not appear by 2026-10-15 - a stalled
+  series is a kill criterion, not a curiosity.
+route: portfolio
+ceiling:
+  tag: LOW
+  note: Validation unit on the shared chassis.
+owner_checks:
+- archive-probe.mjs probe on markt.apg.at
+- Confirm from a browser whether ebUtilities.at has any public (non-login) capacity view

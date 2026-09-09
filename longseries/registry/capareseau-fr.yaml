@@ -1,0 +1,94 @@
+# Screened 2026-09-09 in the international grid-capacity hunt. Evidence in the dossier.
+# A sibling of the German Schaltfeld series on the same chassis, not a separate business.
+id: capareseau-fr-capacites-accueil
+title: CapaReseau - French national grid hosting-capacity map (RTE + Enedis + DSOs)
+status: option
+decision: collect
+verdict: OPTION
+verdict_date: '2026-09-09'
+screened_with: vanishing-data-prospector v2 (international rank-and-register pass, 2026-09-09)
+dossiers:
+- workflow-tools/patterns docs/research/2026-09-09-vanishing-data-dossier-grid-capacity-worldwide.md
+history:
+- date: '2026-09-09'
+  status: option
+  note: International hunt; verified at station 1 by reading the application, not the page. Sibling of
+    the German Schaltfeld series on the same chassis, not a separate business.
+collector:
+  built: false
+  sources: []
+  how_to_build: 'Landing-only source. Fetch https://www.capareseau.fr/region/&lt;id&gt; (server-rendered),
+    regex the /medias/&lt;UUID&gt; whose content-disposition filename is region-&lt;id&gt;.json, then
+    GET that UUID. Returns plain JSON, no login, no JS: 237 records for region 11, each with name, code,
+    u_max, updated (per-record date), S3REnR ratios and INFO_QP quote-part EUR/MW. ~13 regions. Re-derive
+    the UUID each poll (it can rotate). Store both the per-record "updated" and the fetch date. ~3 hours.'
+stations:
+  s1_archive:
+    result: PASS
+    tag: HIGH
+    note: 'No archive/historique/precedent link on the root page or any region page (fetched 2026-09-09).
+      One stray dated file sits in the media library, backup_20260811_150229.csv (388 KB, national table)
+      - a single accidental snapshot, not an indexed series; a pile is not a panel, and it is a free partial
+      backfill. Coverage map NOT built: web.archive.org blocked from this sandbox - owner runs archive-probe.mjs
+      from the Beelink.'
+  s2b_buyers_later:
+    result: PASS 2/3
+    tag: MED
+    note: 'Comparable: PVcase Prospect and Searchland sell a consolidated CURRENT view of grid capacity
+      [HIGH]; GridTracker sells the longitudinal version in the US [MED]. Disputed/traded: French S3REnR
+      quote-part disputes and battery project sales turn on the published reservation state at filing
+      date. Leading indicators not re-derived this pass.'
+  s3_churn:
+    result: PASS
+    tag: HIGH
+    note: Per-record "updated" field observed at 29/04/2026 on Ile-de-France records; no publisher-stated
+      global cadence found, so a 90-day churn gate applies (daily poll; if no record changes by the gate,
+      close the option).
+  s4_licence:
+    result: NOT RUN
+    tag: n/a
+    note: No licence statement located this pass. Non-binding disclaimer quoted verbatim ("mises a disposition
+      a titre indicatif ... ne sont pas engageantes pour les gestionnaires"). Derived facts only; snapshot
+      robots.txt and terms at capture time. Run station 4 before any resale.
+  s5_withdrawal:
+    result: PASS with named risks
+    tag: MED
+    note: 'Subject objection nil (substations). Publisher withdrawal low (joint RTE/DSO courtesy platform).
+      Withdrawal in reverse is the live risk: Commission Notice C/2025/6703 urges single national platforms;
+      France already has one, so a versioning decision is one product change away.'
+  s6_validation:
+    result: option mode, not started
+    tag: n/a
+future_question: Quelle capacite d'accueil et quelle quote-part S3REnR le poste X affichait-il le jour
+  de notre demande de raccordement ?
+buyers_now: []
+buyers_later:
+- type: French renewables and storage developers, and the consultancies filing for them
+  evidence: S3REnR quote-part is published per substation and changes; filing timing is a recurring decision
+  tag: MED
+premium:
+  setup_hours: 3
+  monthly_eur: 1
+  note: Marginal cost on the existing chassis VPS; no new infrastructure.
+wedge: A change alert per poste (before/after, both editions attached) plus a consolidated FR+DE+DK table;
+  offer free to two French developers and one consultancy. Usage is the evidence.
+kill_criteria:
+- CapaReseau, RTE or Enedis publishes dated prior editions, a version picker or a history endpoint
+- The media library grows an indexed series of dated backups rather than one stray file
+- A funded party (PVcase, Searchland, Enedis Open Data) starts publishing the dated series
+- The JSON route disappears behind a login, a JS-only render, or an API key
+- '90-day churn gate: no record changes on daily polls by 2026-12-08'
+- Nobody has used the wedge by the review date
+- Licence or robots.txt changes, or a machine-readable TDM reservation appears
+review_date: '2027-09-09'
+review_note: Re-run stations 1, 2b and 5 in an hour. Bring forward if the EU single-national-platform
+  recommendation produces a French versioning commitment.
+route: portfolio
+ceiling:
+  tag: LOW
+  note: A validation unit on the shared chassis, not a business. Value is that it makes the Schaltfeld
+    table multi-country, not that France sells on its own.
+owner_checks:
+- archive-probe.mjs probe on capareseau.fr and the /medias/ paths (Wayback reachable from the Beelink)
+- Confirm the /medias/ UUID for each of the ~13 regions and whether the UUIDs are stable across weeks
+- Locate any licence statement or CGU on capareseau.fr before station 4 can pass

@@ -63,3 +63,31 @@ def test_show_survives_a_capture_that_has_no_manifest(tmp_path, capsys):
     assert out["latest"] == "2026-09-01T120000Z"
     assert out["counts"] == {"new": 2}
     assert "2026-09-02T120000Z" in json.dumps(out), "the incomplete capture must be named, not hidden"
+
+
+AMPRION_YAML = """
+source_id: de-tso-amprion-netzanschluss
+publisher: Amprion GmbH
+landing_url: https://www.amprion.net/landing
+declared_cadence: P1M
+polarity: lists_state
+contact: mailto:archive@example.test
+"""
+
+
+def test_extract_does_not_report_success_when_a_document_lost_its_parser(tmp_path, capsys):
+    """D3: cmd_extract returned `3 if counts['failed'] else 0` and never consulted
+    no_parser, so a renamed document — the other filename convention already used
+    on the same Amprion page — gave {'no_parser': 2, 'parsed': 0} and exit 0 while
+    the series quietly froze."""
+    p = tmp_path / "amprion.yaml"
+    p.write_text(AMPRION_YAML, encoding="utf-8")
+    store = ContentAddressedStore(tmp_path / "data")
+    store.save("de-tso-amprion-netzanschluss", "https://x/2026.10_Ergaenzendes_Dokument_v2.pdf",
+               b"%PDF-1.4 renamed", NOW, http_status=200, headers={}, discovered_on="x", capture_id="c1")
+    store.save("de-tso-amprion-netzanschluss", "https://www.amprion.net/landing", b"<html/>", NOW,
+               http_status=200, headers={}, discovered_on="x", capture_id="c1", role="landing")
+    rc = main(["extract", str(p), "--data", str(tmp_path / "data")])
+    counts = json.loads(capsys.readouterr().out)
+    assert counts["no_parser_documents"] == 1, "the landing page having no parser is normal; a document is not"
+    assert rc == 3

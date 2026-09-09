@@ -93,7 +93,7 @@ def test_extract_writes_silver_rows_with_provenance(tmp_path):
     _rec(store, b"%PDF map", "https://www.amprion.net/.../Karte-04.2026.pdf")
     _rec(store, b"<html>Stand 04.2026</html>", "https://www.amprion.net/landing", role="landing")
     counts = extract_source(store, AMPRION)
-    assert counts == {"parsed": 1, "skipped": 0, "no_parser": 2, "failed": 0, "rows": 3}, "map pdf and landing have no parser"
+    assert counts == {"parsed": 1, "skipped": 0, "no_parser": 2, "no_parser_documents": 1, "failed": 0, "rows": 3}, "map pdf and landing have no parser"
     rows = load_silver(store, "de-tso-amprion-netzanschluss")
     assert len(rows) == 3
     r = rows[0]
@@ -167,3 +167,101 @@ def test_series_detects_transitions_appearance_disappearance_and_restatement():
     assert s["restatements"][0]["changes"] == {"remarks": {"from": "A", "to": "B"}}
     md = render_markdown(s, "test")
     assert "Esch" in md and "2032" in md and "Restatements" in md
+
+
+# ------------------------------------------------------ a torn store (D4)
+
+MAY_LINES = [l if l != "Stand April 2026" else "Stand Mai 2026" for l in LINES]
+
+
+def test_a_missing_blob_is_a_known_gap_not_a_crash(tmp_path):
+    """run.py promises 'failures are files, not log lines', but the blob read sat
+    OUTSIDE the try: one unlinked blob raised FileNotFoundError out of
+    extract_source, wrote no .error.json, and stopped the whole source — including
+    the newer, healthy edition behind it. The index is append-only, so the bad row
+    is re-hit on every later run and the series freezes for good."""
+    store = ContentAddressedStore(tmp_path)
+    april = _rec(store, make_pdf(), "https://x/Ergaenzendes-Dokument-04.2026.pdf", cid="c1")
+    _rec(store, make_pdf(MAY_LINES), "https://x/Ergaenzendes-Dokument-05.2026.pdf", cid="c2")
+    store.blob_path("de-tso-amprion-netzanschluss", april["sha256"]).unlink()
+    counts = extract_source(store, AMPRION)
+    assert counts["failed"] == 1 and counts["parsed"] == 1, "the healthy May edition must still be parsed"
+    errs = list((tmp_path / "de-tso-amprion-netzanschluss" / "silver").glob("*/*.error.json"))
+    assert [json.loads(e.read_text())["sha256"] for e in errs] == [april["sha256"]]
+
+
+def test_a_blob_that_does_not_match_its_own_hash_is_a_gap_not_silent_bad_data(tmp_path):
+    store = ContentAddressedStore(tmp_path)
+    rec = _rec(store, make_pdf(), "https://x/Ergaenzendes-Dokument-04.2026.pdf", cid="c1")
+    p = store.blob_path("de-tso-amprion-netzanschluss", rec["sha256"])
+    p.write_bytes(p.read_bytes()[:1000])   # what a killed writer used to publish
+    counts = extract_source(store, AMPRION)
+    assert counts["failed"] == 1 and counts["parsed"] == 0
+    err = next(iter((tmp_path / "de-tso-amprion-netzanschluss" / "silver").glob("*/*.error.json")))
+    assert "sha256" in json.loads(err.read_text())["error"].lower()
+
+
+# ---------------------------------------------- silent row loss in tables (D2)
+
+class _FakePage:
+    """pymupdf's table object, reduced to what the parser touches. There was zero
+    coverage of _via_tables — grep for find_tables in tests/ returned nothing."""
+
+    def __init__(self, rows):
+        self._rows = rows
+
+    def find_tables(self):
+        return type("T", (), {"tables": [type("t", (), {"extract": lambda s: self._rows})()]})()
+
+
+HEADER = ["Schaltanlage", "Spannungs-\nebene", "Stadt/Gemeinde", "Anschlussauslegung",
+          "Voraussichtlich frühestes Inbetriebnahmejahr", "Anmerkungen"]
+TABLE = [HEADER,
+         ["Clusorth", "380 kV", "Lingen (Ems)", "(n-1)", "2035", ""],
+         ["Esch", "380 kV", "Pulheim", "(n-1)", "2032", ""],
+         ["Wittenhorst", "380 kV", "Hamminkeln", "(n-0)", "2033", ""]]
+
+
+def test_via_tables_reads_every_row_of_a_clean_table():
+    rows = AmprionSupplementaryParser()._via_tables(_FakePage(TABLE))
+    assert [r["entity"] for r in rows] == ["Clusorth", "Esch", "Wittenhorst"]
+
+
+def test_via_tables_refuses_to_silently_drop_a_row_it_cannot_read():
+    """A footnote marker on two voltage cells ('380 kV' -> '380 kV*') dropped those
+    two rows with no error and no count, and `_via_tables(page) or _via_lines(text)`
+    short-circuits as soon as the silent path yields one row. build_series then
+    reported Esch and Wittenhorst as DISAPPEARED — the publisher never said that."""
+    footnoted = [TABLE[0], TABLE[1], ["Esch", "380 kV*", "Pulheim", "(n-1)", "2032", ""],
+                 ["Wittenhorst", "380 kV*", "Hamminkeln", "(n-0)", "2033", ""]]
+    with pytest.raises(ParseError):
+        AmprionSupplementaryParser()._via_tables(_FakePage(footnoted))
+
+
+# ------------------------------------------- one parser version at a time (D1)
+
+def test_load_silver_reads_only_the_newest_parser_version(tmp_path):
+    """silver_dir includes the version, so a fixed parser writes a new directory and
+    the old rows are never removed. load_silver merged both and build_series
+    published the bug fix as a restatement the publisher never made — and at v10,
+    lexicographic ordering put v10 BEFORE v2, so 'latest state per entity' became
+    the OLD parser's answer and the restatement pointed backwards."""
+    base = tmp_path / "de-tso-amprion-netzanschluss" / "silver"
+    for version, year in ((2, 2034), (10, 2035)):
+        d = base / f"amprion-supplementary-v{version}"
+        d.mkdir(parents=True)
+        (d / "abc.jsonl").write_text(json.dumps({
+            "entity": "Clusorth", "edition": "2026-04", "observed_at": "2026-09-03T06:00:00+00:00",
+            "earliest_year": year, "parser_id": "amprion-supplementary", "parser_version": version}) + "\n",
+            encoding="utf-8")
+    rows = load_silver(ContentAddressedStore(tmp_path), "de-tso-amprion-netzanschluss")
+    assert [r["parser_version"] for r in rows] == [10]
+    assert build_series(rows)["restatements"] == []
+
+
+def test_two_parses_of_one_capture_are_never_a_restatement():
+    """A restatement means the publisher republished an edition. Two rows with the
+    SAME observed_at are two parses of one capture, which is a code event."""
+    rows = [_row("Esch", "2026-04", "2026-09-03T06:00:00+00:00", earliest_year=2034),
+            _row("Esch", "2026-04", "2026-09-03T06:00:00+00:00", earliest_year=2035)]
+    assert build_series(rows)["restatements"] == []

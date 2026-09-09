@@ -62,17 +62,35 @@ class AmprionSupplementaryParser:
             return []
         for t in getattr(tabs, "tables", []):
             cells = t.extract()
-            rows = []
+            rows, header_seen = [], False
             for c in cells:
+                c = [(x or "").strip() for x in c] + [""] * max(0, 6 - len(c))
+                if not any(c):
+                    continue
+                if self._is_header(c):
+                    header_seen = True
+                    continue
                 if len(c) < 5:
                     continue
-                c = [(x or "").strip() for x in c] + [""] * (6 - len(c))
                 mk, md, my = _KV.match(c[1]), _DESIGN.match(c[3]), _YEAR.match(c[4])
                 if mk and md and my:
                     rows.append(self._row(c[0], mk.group(1), c[2], md.group(1), my.group(1), c[5]))
+                elif header_seen:
+                    # As strict as _via_lines. This path used to skip what it could not
+                    # read: a footnote marker on a voltage cell ('380 kV' -> '380 kV*')
+                    # dropped that substation with no error and no count, and the series
+                    # then reported it as DISAPPEARED — which is the publisher saying a
+                    # connection is no longer available. Absence must never be
+                    # manufactured by a parser.
+                    raise ParseError(f"unreadable row under a recognised header: {c[:5]}")
             if rows:
                 return rows
         return []
+
+    @staticmethod
+    def _is_header(c: list[str]) -> bool:
+        joined = " ".join(c).lower().replace("-\n", "").replace("\n", " ")
+        return "schaltanlage" in joined and "spannungs" in joined
 
     def _via_lines(self, text: str) -> list[dict]:
         lines = [l.strip() for l in text.splitlines() if l.strip()]

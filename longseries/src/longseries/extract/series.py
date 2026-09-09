@@ -30,7 +30,9 @@ def build_series(rows: list[dict]) -> dict:
         seen_in_edition: dict[str, dict] = {}
         for r in ers:
             prev = seen_in_edition.get(r["edition"])
-            if prev is not None:
+            # Same edition AND same observed_at is two parses of one capture (two
+            # parser versions, or a replay), never a publisher restatement.
+            if prev is not None and prev["observed_at"] != r["observed_at"]:
                 diff = _diff(prev, r)
                 if diff:
                     restatements.append({"entity": entity, "edition": r["edition"],

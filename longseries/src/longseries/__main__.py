@@ -172,7 +172,9 @@ def cmd_extract(args) -> int:
     config = _load(args.source)
     counts = extract_source(ContentAddressedStore(Path(args.data)), config, replay=args.replay)
     print(json.dumps(counts, indent=2))
-    return 3 if counts["failed"] else 0
+    # no_parser_documents is not cosmetic: a document the extractor cannot route is a
+    # frozen series that collection keeps looking healthy through.
+    return 3 if (counts["failed"] or counts["no_parser_documents"]) else 0
 
 
 def cmd_series(args) -> int:

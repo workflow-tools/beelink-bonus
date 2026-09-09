@@ -186,3 +186,81 @@ a model is needed:
 None recorded — the panel did not complete. Where this record departs from
 the single completed design: none; it adopts that design's decisions and
 marks what it could not corroborate.
+
+---
+
+## Note appended 2026-09-09 — what a bug hunt changed about this record
+
+Appended, not rewritten: the decisions above stand, but four of the claims
+made for them were not true of the code as built. A five-lens hunt filed 32
+findings; after merging duplicates, 26 distinct defects, 18 CONFIRMED, 7
+PARTIAL, 1 REFUTED. Twenty-one were fixed the same day (suite 110 → 168).
+The full catalogue, with what is COVERED by a test, what is merely HANDLED,
+and what is a GAP, is **`docs/FAILURE-MODES.md`**.
+
+**Q3 — "a restart-safe first-poll gate".** The gate existed and had two ways
+of switching itself off. It clamped only the lower bound of the wait, so one
+future-dated capture directory (a dead CMOS cell's BIOS default of 2099) slept
+a collector for 26,420 days, re-selecting the same directory on every restart.
+And it failed *open* on any capture directory name that would not parse — a
+stray `backup-before-rsync` sorts after every `2026-…` timestamp — returning
+`0.0` and silently disabling the station-5 withdrawal-risk mitigation the gate
+exists to be. Both fixed; the gate now clamps at both ends, skips future dates,
+uses the newest name that actually parses, and waits a **full** interval when
+nothing on disk can be believed.
+
+The same Q3 paragraph specifies a host-level systemd timer pinging a "host
+alive" check with `df -h` and `docker ps`, `/fail` under 2 GB free. Still not
+built. Free space remains unmonitored; ENOSPC itself is now handled cleanly
+(the index append rolls back rather than leaving a torn row).
+
+**Q4 — "every alert is already on disk in the capture manifest, so `show` is
+the source of truth when the provider is down".** True of the manifest, false
+of `show`, which read `caps[-1]` unconditionally and raised `FileNotFoundError`
+on a capture directory with no manifest — precisely what a killed poll leaves,
+and PID 1 was `python` with no SIGTERM handler, so *every* `docker stop`
+SIGKILLed after 10 s. The one command an operator runs to check on a collector
+was the one that died. `show` now falls back to the newest complete capture and
+names the incomplete ones; `compose.yaml` gained `init: true`.
+
+Q4 also understates what the heartbeat did. It never inspected the watchdog's
+HTTP status, so a 404/429/503 on a `/fail` POST discarded the alert with no log
+line and no retry; and its `except httpx.HTTPError` let `httpx.InvalidURL` and
+a bare `ValueError` (a malformed or unexpanded ping URL) escape and *replace
+the run's own exception*, directly contradicting the module's own docstring.
+Both fixed: status checked, `/fail` retried on 408/429/5xx, `except Exception`
+because the contract is log-and-swallow-always, and the ping URL redacted in
+every log line and in `validate` — it is an unauthenticated capability that can
+mute a source's dead-man's switch. What remains true and unaddressed: **nothing
+monitors the monitor.** A deleted check or a lapsed account silences a source
+and only stderr says so. Q4's independent dead-man from a second machine (the
+Beelink pull timer's own `/fail`) is still the fix, and is still unbuilt.
+
+**Q6 — "disposition is decided on the visible-text hash".** Correct, and it had
+a consequence this record did not draw. Because the landing page is saved as a
+payload in its own right, its prose drift — one news teaser a month — reset the
+staleness clock for the *documents*, so `STALE` and `ZERO_NEW_FILES` could
+never fire on the one source that collects documents, over 460 simulated days
+of frozen PDFs. `last_change_at` now takes a `roles` filter, and staleness is
+measured over documents on a source with `accept_extensions` and over
+everything on a landing-only source. The Q6 decision is unchanged; its scope
+was wrong.
+
+**Q1 — bronze reaching extraction.** Nothing here was falsified; nothing here
+was built either. There is no `ops/` directory: no pull timer, no pull
+heartbeat, no mirror-freshness check. A pull set up by hand that later stops
+ages the mirror in silence. With no off-host replica and no verified provider
+backup actually running, the store on one host is the only copy of the asset —
+the single largest exposure in the project, and the only failure in
+`FAILURE-MODES.md` with no code-level mitigation at all.
+
+**Q7 build order.** Item 1's "Done (6cd5fdf)" stands. Add, ahead of item 3
+(gold v0): the `.longseries-root` marker for Q1's data root (an unmounted bind
+mount was indistinguishable from a fresh install — everything re-captured as
+`new`, both staleness alarms gated off, watchdog green; the compose-side
+trigger is now removed with `create_host_path: false`, the in-collector half is
+deferred pending an owner decision), and `ops/` for Q1 and Q3. Item 5's
+deferred list gains: recording `final_url` and the redirect chain on index rows
+with an `allowed_hosts` policy (an owner call — a TSO legitimately serving PDFs
+from a CDN would start failing every poll), a full-store `longseries verify`,
+and a per-source expectation on silver row counts.

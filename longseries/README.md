@@ -74,6 +74,28 @@ fine): period **1 day**, grace **6 hours**. Put its ping URL in `.env`.
 | `ZERO_NEW_FILES` | P1 | Nothing new or changed, and a change was due per the declared cadence. |
 | `STALE` | P1 | Bytes identical for > 1.5× the declared cadence. Publisher broke, or you are eating a cache. |
 | `PAYLOAD_TOO_SMALL` | P1 | A new/changed file is under `min_payload_bytes` — an error page served with a 200? |
+| `WRONG_CONTENT_TYPE` | P1 | A 200 whose body is not what the URL promised (HTML at a `.pdf` URL). Stored anyway — a block page is evidence — but not a new edition. |
+| `DOCUMENT_UNREACHABLE` | P1 | A linked document could not be fetched. That edition is not in the store. |
+| `DOCUMENT_WITHDRAWN` | **P0** | A document we captured successfully before now fails. A retraction is the event this collector exists to witness. |
+
+## When something goes wrong
+
+**[`docs/FAILURE-MODES.md`](docs/FAILURE-MODES.md) is the first thing to read**
+— especially if a check has gone red and you are not at your desk. It
+catalogues every way this collector can fail (publisher moved, bot wall, bad
+YAML edit, disk full, killed mid-write, watchdog lapsed, replica pull stopped,
+clock skew, host lost entirely): what the operator actually sees, what the code
+does today, what it does **not** do, and the workaround. Each entry is marked
+COVERED (a test proves it), HANDLED (code does it, nothing proves it) or GAP
+(nothing does it) — including the recovery procedure for a lost host and the
+one thing that has no code-level mitigation at all: **back up
+`$LONGSERIES_DATA`.**
+
+Fast triage: `docker compose ps` → `docker compose logs --tail=100 <svc>` →
+`docker compose run --rm <svc> show /sources/<x>.yaml --data /data`. Every
+alert is on disk in the capture manifest, so `show` is the source of truth when
+healthchecks itself is down. Nothing under `blobs/`, `index.jsonl` or
+`captures/` is ever deleted to "clean up".
 
 ## What lands on disk
 
@@ -127,7 +149,7 @@ collector returns zero rows and reports success.
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[test]"
-pytest            # 90 tests; HTTP is faked with httpx.MockTransport, PDFs are generated in-test, nothing touches the network
+pytest            # 168 tests; HTTP is faked with httpx.MockTransport, PDFs are generated in-test, nothing touches the network
 ```
 
 Stories are in `docs/USER-STORIES.md`; every acceptance criterion names its
@@ -139,7 +161,7 @@ No CI. This is the record.
 
 | Check | Result |
 |---|---|
-| `pytest` | 90/90 |
+| `pytest` | 90/90 (168/168 after the 2026-09-09 bug hunt — see `docs/FAILURE-MODES.md`) |
 | Host poll ×2 against live Amprion | 3 new → 3 unchanged, 3 blobs, exit 0 |
 | Container poll ×2 against live Amprion | same, from inside the image |
 | Container with `--network=none` | clean failed run, exit 2, `P1 LANDING_UNREACHABLE`, manifest written, no traceback |

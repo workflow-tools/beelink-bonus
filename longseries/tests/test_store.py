@@ -282,3 +282,26 @@ def test_poll_claims_its_own_capture_directory(config, store, site, landing_html
     assert r1.capture_id != r2.capture_id
     assert store.read_manifest(config.source_id, r1.capture_id)["counts"]["new"] == 3
     assert store.read_manifest(config.source_id, r2.capture_id)["counts"]["unchanged"] == 3
+
+
+def test_a_complete_row_missing_only_its_newline_is_not_glued_to_the_next_append(store, now):
+    """A writer killed between a row's bytes and its newline leaves a valid,
+    unterminated last line. Reads coped; the next append did not — it wrote
+    straight after it, gluing two rows into one line no reader could parse, and
+    `repair` then trimmed BOTH as one torn line."""
+    store.save("test-tso", "https://example.test/0", b"v0", now, http_status=200, headers={}, discovered_on="x", capture_id="c1")
+    idx = store.index_path("test-tso")
+    idx.write_bytes(idx.read_bytes().rstrip(b"\n"))
+    store.save("test-tso", "https://example.test/1", b"v1", now, http_status=200, headers={}, discovered_on="x", capture_id="c2")
+    assert [r["source_url"] for r in store._iter_index("test-tso")] == ["https://example.test/0", "https://example.test/1"]
+    assert idx.read_bytes().endswith(b"\n")
+
+
+def test_repair_leaves_a_complete_but_unterminated_last_row_alone(store, now):
+    store.save("test-tso", "https://example.test/0", b"v0", now, http_status=200, headers={}, discovered_on="x", capture_id="c1")
+    idx = store.index_path("test-tso")
+    unterminated = idx.read_bytes().rstrip(b"\n")
+    idx.write_bytes(unterminated)
+    assert store.repair_index("test-tso") == 0, "a row that parses is a capture record, never damage"
+    assert idx.read_bytes() == unterminated
+    assert len(store.versions("test-tso", "https://example.test/0")) == 1

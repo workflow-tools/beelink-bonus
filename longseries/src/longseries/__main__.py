@@ -219,10 +219,11 @@ def cmd_show(args) -> int:
                           "note": "no capture has a manifest; every run so far was interrupted"}, indent=2))
         return 0
     m = store.read_manifest(config.source_id, complete[-1])
+    last_change = store.last_change_at(config.source_id)
     print(json.dumps({"captures": len(caps), "latest": complete[-1], "incomplete_captures": incomplete,
                       "counts": m.get("counts"), "failed": m.get("failed"),
                       "alerts": m.get("alerts"), "landing_status": m.get("landing_status"),
-                      "last_change_at": (store.last_change_at(config.source_id) or "never") and str(store.last_change_at(config.source_id))}, indent=2))
+                      "last_change_at": str(last_change) if last_change else "never"}, indent=2))
     return 0
 
 

@@ -436,3 +436,48 @@ def test_a_real_pdf_raises_no_content_type_alert(config, store, site, landing_ht
     _happy_site(site, config, landing_html)
     run = _mk(site, config, store).poll(now=now, capture_id="c1")
     assert not any(x.code == "WRONG_CONTENT_TYPE" for x in run.alerts)
+
+
+# ---------------------------------------------------------------- wire encoding
+
+def test_a_gzip_encoded_response_is_decoded_once_and_stored_plain(config, store, site, landing_html, now):
+    """Found in review, 2026-09-11. httpx applies the content-encoding while the
+    body streams in, so the bytes _get collects are already plain. Rebuilding the
+    Response with the ORIGINAL headers made httpx decode them a second time:
+    DecodingError on every compressed response. Every TSO serves its landing page
+    gzip-compressed, so the streamed rewrite would have failed every poll in
+    production (P1 LANDING_UNREACHABLE, nothing captured) while passing every
+    test — a MockTransport body is never compressed unless a test compresses it."""
+    import gzip
+    import hashlib
+    pdf = b"%PDF-1.4 " + b"x" * 2000
+    site.set(config.landing_url, 200, gzip.compress(landing_html.encode()),
+             {"content-type": "text/html; charset=utf-8", "content-encoding": "gzip"})
+    site.set("https://example.test/robots.txt", 200, b"User-agent: *\nAllow: /\n")
+    site.set("https://example.test/files/Netzanschluss_Kapazitaeten_2026-08.pdf", 200, gzip.compress(pdf),
+             {"content-type": "application/pdf", "content-encoding": "gzip"})
+    site.set("https://example.test/netz/anschluss/files/07_Anschluss_v2.xlsx", 200, gzip.compress(b"PK" + b"y" * 2000),
+             {"content-type": "application/vnd.ms-excel", "content-encoding": "gzip"})
+    run = _mk(site, config, store).poll(now=now, capture_id="c1")
+    assert run.failed is False, run.error
+    assert not any(a.code == "WRONG_CONTENT_TYPE" for a in run.alerts)
+    assert store.blob_path(config.source_id, hashlib.sha256(pdf).hexdigest()).exists(), \
+        "stored decoded, under the hash of the document itself"
+    row = store.versions(config.source_id, "https://example.test/files/Netzanschluss_Kapazitaeten_2026-08.pdf")[-1]
+    recorded = {k.lower(): v for k, v in row["headers"].items()}
+    assert recorded.get("content-length") == str(len(pdf)), "the recorded length describes the blob, not the wire"
+    assert "content-encoding" not in recorded
+
+
+def test_content_sniff_does_not_mistake_a_comment_first_xml_feed_for_html(config, store, site):
+    """`<!--` and `<head` were HTML signatures; an XML feed that opens with a
+    comment was a P1 WRONG_CONTENT_TYPE on every new edition. Conversely the sniff
+    only looked at byte 0, so a maintenance page that opens with a comment and is
+    served under the document's own content-type slipped past it."""
+    a = _mk(site, config, store)
+    feed = httpx.Response(200, headers={"content-type": "application/xml"},
+                          content=b"<!-- generated 2026-09-11 -->\n<?xml version='1.0'?><feed><head/></feed>")
+    assert a._content_mismatch("https://example.test/files/kapazitaeten.xml", feed) is None
+    page = httpx.Response(200, headers={"content-type": "application/vnd.ms-excel"},
+                          content=b"<!-- maintenance -->\n<!DOCTYPE html><html><body>Wartung</body></html>")
+    assert a._content_mismatch("https://example.test/files/kapazitaeten.xlsx", page) is not None

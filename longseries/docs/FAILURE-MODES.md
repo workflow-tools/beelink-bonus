@@ -3,8 +3,10 @@
 What can go wrong with this collector, what the operator sees when it does,
 what the code does about it today, what it does **not** do, and what to do by
 hand. Written 2026-09-09 after a bug hunt over the whole chassis (26 distinct
-defects reproduced, 21 fixed; suite 110 → 168 tests). It is the first thing to
-read when a check goes red.
+defects reproduced, 21 fixed; suite 110 → 168 tests). Reviewed line by line on
+2026-09-11: one regression the hunt itself introduced (#27) and three small
+defects fixed, suite 173 — see `log/2026-09-11-longseries-review-of-the-bug-hunt.md`.
+It is the first thing to read when a check goes red.
 
 **Read the severity scale the way the store does.** The archive is the asset:
 a rival starting in 2028 cannot obtain 2026 data at any price. So, in order:
@@ -60,7 +62,7 @@ Labels used throughout:
 | 8 | Disk full (ENOSPC) mid-poll | `/fail` ping carrying `crashed: OSError(28, …)`; the schedule sleeps and retries | The index append rolls back to its pre-append size, so no torn row survives; a half-written blob scratch file is unlinked; the exception reaches the watchdog | **COVERED** (rollback) / **HANDLED** (ping path) |
 | 9 | Disk nearly full — no ENOSPC yet | *Nothing* | Nothing. No free-space check anywhere | **GAP** |
 | 10 | Container killed mid-write (`docker stop`, OOM, power) | Next `show` names the capture as incomplete; the poll is simply redone | `init: true` gives PID 1 a signal handler; blobs are finalised with `os.link` under a per-writer scratch name; the index rolls back; capture directories are claimed with `mkdir(exist_ok=False)`; `show` falls back to the newest complete capture | **COVERED** (store + `show`) / **HANDLED** (`init: true`) |
-| 11 | A torn trailing line already in `index.jsonl` | `IndexCorrupt: …/index.jsonl: line N is not valid JSON …` naming the file and line | Every read raises with a location instead of a bare `JSONDecodeError`; `longseries repair` trims a **trailing** partial line only | **COVERED** |
+| 11 | A torn trailing line already in `index.jsonl` | `IndexCorrupt: …/index.jsonl: line N is not valid JSON …` naming the file and line | Every read raises with a location instead of a bare `JSONDecodeError`; `longseries repair` trims a **trailing** partial line only. A complete last row missing only its newline is not damage: `repair` leaves it, and the next append terminates it instead of gluing the new row onto it | **COVERED** |
 | 12 | Data root not mounted (bind mount points at nothing) | *Nothing.* Green ping, everything re-captured as `new`, forever | `create_host_path: false` makes Docker refuse to start rather than invent an empty host directory | **HANDLED** (compose is not exercised by the suite) — the in-collector half is a **GAP** |
 | 13 | Watchdog URL rotated, check deleted, or account lapsed | `[heartbeat] ping hc-ping.com/8f3c1e2a… FAILED after 3 attempt(s): HTTP 404` on stderr — **and nothing else** | Non-2xx is detected, `/fail` is retried 3× on 408/429/5xx, and every failure is shouted to stderr | **COVERED** (detection) / **GAP** (nothing monitors the monitor) |
 | 14 | No heartbeat configured at all | `[heartbeat] NO HEARTBEAT CONFIGURED — this source is UNMONITORED` on stderr at every run | Says so, loudly, then runs anyway | **COVERED** |
@@ -76,6 +78,7 @@ Labels used throughout:
 | 24 | A blob is missing or does not match its own name | `<sha>.error.json`, `counts.failed`, extraction continues | Read and re-hash happen inside the try; one bad blob no longer stops the whole source on every future run | **COVERED** |
 | 25 | `extract` never runs at all | *Nothing* | Nothing. `extract` is not in `compose.yaml` and not on any watchdog | **GAP** |
 | 26 | Collector host lost entirely | Every check for that host goes red within a day | Nothing automatic. See **Recovery** below | **GAP** |
+| 27 | Publisher serves a compressed response (`content-encoding: gzip` — every TSO does) | Between 2026-09-09 and 2026-09-11 this would have been `/fail` with `P1 LANDING_UNREACHABLE` carrying `DecodingError`, on every poll, nothing captured; now nothing | `_get` streams the bytes httpx has already decoded and rebuilds the Response without the wire-only headers (`content-encoding`, `content-length`, `transfer-encoding`), so nothing is decoded twice; the recorded `content-length` is the blob's own. A `MockTransport` never compresses, which is how the streamed rewrite passed 168 tests | **COVERED** |
 
 ---
 

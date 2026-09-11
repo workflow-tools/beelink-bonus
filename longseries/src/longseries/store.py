@@ -146,9 +146,19 @@ class ContentAddressedStore:
         p = self.index_path(source_id)
         p.parent.mkdir(parents=True, exist_ok=True)
         size = p.stat().st_size if p.exists() else 0
+        # A complete last row with no newline — a writer killed between the row's
+        # bytes and its "\n" — reads fine as it stands, but appending straight after
+        # it would glue two rows into one line no reader can parse. Terminate it
+        # first; the rollback below covers this byte too. (A TORN last line never
+        # reaches here: save() reads the index first and IndexCorrupt stops it.)
+        lead = ""
+        if size:
+            with open(p, "rb") as f:
+                f.seek(size - 1)
+                lead = "" if f.read(1) == b"\n" else "\n"
         try:
             with open(p, "a", encoding="utf-8") as f:
-                f.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+                f.write(lead + json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
                 f.flush()
                 os.fsync(f.fileno())
         except BaseException:
@@ -182,7 +192,9 @@ class ContentAddressedStore:
     def repair_index(self, source_id: str) -> int:
         """Trim a TRAILING partial line and return the bytes removed. That is the
         only damage a killed or out-of-space writer can leave. A corrupt line
-        anywhere else means something else happened; it is raised, never dropped."""
+        anywhere else means something else happened; it is raised, never dropped.
+        A last line that is complete but lacks its newline is a capture record,
+        not damage: it is left alone (the next append terminates it)."""
         p = self.index_path(source_id)
         if not p.exists():
             return 0
@@ -198,6 +210,11 @@ class ContentAddressedStore:
                 raise IndexCorrupt(source_id, p, lineno, str(e)) from e
         if not trailing:
             return 0
+        try:
+            if isinstance(json.loads(trailing.decode("utf-8")), dict):
+                return 0  # every byte of the row arrived; only the newline is missing
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass
         with open(p, "r+b") as f:
             f.truncate(len(raw) - len(trailing))
             f.flush()

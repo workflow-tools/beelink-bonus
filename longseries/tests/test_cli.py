@@ -91,3 +91,12 @@ def test_extract_does_not_report_success_when_a_document_lost_its_parser(tmp_pat
     counts = json.loads(capsys.readouterr().out)
     assert counts["no_parser_documents"] == 1, "the landing page having no parser is normal; a document is not"
     assert rc == 3
+
+
+def test_show_says_never_when_nothing_has_changed_yet(tmp_path, capsys):
+    """`(x or "never") and str(x)` is the string "None" when x is None — a
+    timestamp field reading "None" is a value, not an answer."""
+    store = ContentAddressedStore(tmp_path / "data")
+    store.write_manifest("test-tso", "2026-09-01T120000Z", {"counts": {"new": 0}, "failed": False})
+    assert main(["show", _source(tmp_path), "--data", str(tmp_path / "data")]) == 0
+    assert json.loads(capsys.readouterr().out)["last_change_at"] == "never"

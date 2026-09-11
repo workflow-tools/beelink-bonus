@@ -148,7 +148,16 @@ class BaseAdapter:
                         if self._monotonic() > deadline:
                             raise StalledDownload(f"{url}: still arriving after {self.max_request_seconds}s "
                                                   f"({len(data)} bytes); abandoning this fetch")
-                    return httpx.Response(response.status_code, headers=response.headers, content=bytes(data),
+                    # iter_bytes() has already applied the content-encoding (gzip, deflate,
+                    # br), so `data` is plain. Rebuilding the Response with the ORIGINAL
+                    # headers made httpx decode it a second time — DecodingError on every
+                    # compressed response, and every TSO serves its landing page gzipped.
+                    # Drop the headers that describe the wire, not the document; the
+                    # content-length httpx then fills in matches the stored blob.
+                    headers = httpx.Headers(response.headers)
+                    for wire_only in ("content-encoding", "content-length", "transfer-encoding"):
+                        headers.pop(wire_only, None)
+                    return httpx.Response(response.status_code, headers=headers, content=bytes(data),
                                           request=response.request, history=list(response.history))
             except httpx.TransportError:
                 if attempt >= self.max_attempts:
@@ -164,7 +173,10 @@ class BaseAdapter:
         return response
 
     # ------------------------------------------------- is this the document?
-    _HTML_SNIFF = (b"<!doctype html", b"<html", b"<head", b"<!--")
+    # Looked for anywhere in the first KB, not only at byte 0: a maintenance page
+    # served under a wrong content-type often opens with a comment or a BOM. `<!--`
+    # and `<head` on their own are not HTML — an XML feed may start with either.
+    _HTML_SNIFF = (b"<!doctype html", b"<html")
 
     @staticmethod
     def _extension(url: str) -> str:
@@ -179,9 +191,9 @@ class BaseAdapter:
         content-type header was already in the index row and read nowhere."""
         ext = self._extension(url)
         ctype = (response.headers.get("content-type") or "").split(";")[0].strip().lower()
-        head = response.content[:1024].lstrip().lower()
+        head = response.content[:1024].lower()
         if ext not in (".html", ".htm", ".xhtml") and (ctype in ("text/html", "application/xhtml+xml")
-                                                       or head.startswith(self._HTML_SNIFF)):
+                                                       or any(sig in head for sig in self._HTML_SNIFF)):
             return f"is HTML (content-type {ctype!r}) at a {ext or 'document'} URL"
         if ext == ".pdf" and not response.content.startswith(b"%PDF-"):
             return f"does not begin with %PDF- (content-type {ctype!r})"

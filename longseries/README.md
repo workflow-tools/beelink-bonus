@@ -149,7 +149,7 @@ collector returns zero rows and reports success.
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[test]"
-pytest            # 168 tests; HTTP is faked with httpx.MockTransport, PDFs are generated in-test, nothing touches the network
+pytest            # 173 tests; HTTP is faked with httpx.MockTransport, PDFs are generated in-test, nothing touches the network
 ```
 
 Stories are in `docs/USER-STORIES.md`; every acceptance criterion names its
@@ -161,7 +161,7 @@ No CI. This is the record.
 
 | Check | Result |
 |---|---|
-| `pytest` | 90/90 (168/168 after the 2026-09-09 bug hunt — see `docs/FAILURE-MODES.md`) |
+| `pytest` | 90/90 (168/168 after the 2026-09-09 bug hunt, 173/173 after the 2026-09-11 review of it — see `docs/FAILURE-MODES.md`) |
 | Host poll ×2 against live Amprion | 3 new → 3 unchanged, 3 blobs, exit 0 |
 | Container poll ×2 against live Amprion | same, from inside the image |
 | Container with `--network=none` | clean failed run, exit 2, `P1 LANDING_UNREACHABLE`, manifest written, no traceback |

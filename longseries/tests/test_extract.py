@@ -4,16 +4,16 @@ document. The real document is never committed (derived facts only)."""
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 
 import pymupdf
 import pytest
 
+from longseries.config import SourceConfig
 from longseries.extract.amprion import AmprionSupplementaryParser
 from longseries.extract.base import ParseError, edition_from_text
 from longseries.extract.run import extract_source, load_silver
 from longseries.extract.series import build_series, render_markdown
-from longseries.config import SourceConfig
 from longseries.store import ContentAddressedStore
 
 AMPRION = SourceConfig(source_id="de-tso-amprion-netzanschluss", publisher="Amprion", landing_url="https://www.amprion.net/landing",
@@ -31,8 +31,8 @@ def make_pdf(lines=LINES) -> bytes:
     doc = pymupdf.open()
     page = doc.new_page()
     y = 40
-    for l in lines:
-        page.insert_text((40, y), l, fontsize=9)
+    for line in lines:
+        page.insert_text((40, y), line, fontsize=9)
         y += 14
     return doc.tobytes()
 
@@ -73,7 +73,7 @@ def test_amprion_parser_extracts_rows_with_optional_remarks():
 
 
 def test_amprion_parser_fails_loudly_without_an_edition():
-    lines = [l for l in LINES if not l.startswith("Stand")]
+    lines = [line for line in LINES if not line.startswith("Stand")]
     with pytest.raises(ParseError, match="Stand"):
         AmprionSupplementaryParser().parse(make_pdf(lines), {})
 
@@ -122,13 +122,13 @@ def test_extract_derives_role_for_legacy_index_records(tmp_path):
     """Index records written before role was stored get it derived from the config's
     landing_url at read time — never guessed from content."""
     store = ContentAddressedStore(tmp_path)
-    rec = _rec(store, b"<html>Stand 04.2026</html>", "https://www.amprion.net/landing")
+    _rec(store, b"<html>Stand 04.2026</html>", "https://www.amprion.net/landing")
     # simulate a legacy record: strip the role from the index line
     idx = store.index_path("de-tso-amprion-netzanschluss")
-    lines = [json.loads(l) for l in idx.read_text().splitlines()]
-    for l in lines:
-        l.pop("role", None)
-    idx.write_text("".join(json.dumps(l) + "\n" for l in lines))
+    lines = [json.loads(line) for line in idx.read_text().splitlines()]
+    for line in lines:
+        line.pop("role", None)
+    idx.write_text("".join(json.dumps(line) + "\n" for line in lines))
     seen = []
     import longseries.extract.run as run_mod
     orig = run_mod.select
@@ -171,7 +171,7 @@ def test_series_detects_transitions_appearance_disappearance_and_restatement():
 
 # ------------------------------------------------------ a torn store (D4)
 
-MAY_LINES = [l if l != "Stand April 2026" else "Stand Mai 2026" for l in LINES]
+MAY_LINES = [line if line != "Stand April 2026" else "Stand Mai 2026" for line in LINES]
 
 
 def test_a_missing_blob_is_a_known_gap_not_a_crash(tmp_path):

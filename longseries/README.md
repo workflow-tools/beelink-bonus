@@ -42,7 +42,7 @@ only you know which disk is the asset; `setup` does everything else.
 ```bash
 git clone https://github.com/workflow-tools/beelink-bonus && cd beelink-bonus/longseries
 sudo mkdir -p /srv/longseries && sudo chown "$USER" /srv/longseries    # THE ASSET lives here — pick the real disk
-LONGSERIES_DATA=/srv/longseries HEALTHCHECKS_API_KEY=… docker compose run --rm setup
+LONGSERIES_DATA=/srv/longseries docker compose run --rm setup           # asks for contact + API key
 docker compose up -d --build                                             # one container per source
 ```
 
@@ -51,12 +51,17 @@ in `sources/`, writes the `.longseries-root` marker into the data root, creates
 one healthchecks.io check per source through the Management API (period 1 day,
 grace 6 h, every integration your project already has attached) and writes
 `.env` — contact, data root, one ping URL per source. It asks for the contact
-address and the API key when they are not in the environment, keeps every
-value already in `.env`, and is safe to run again: a check that exists is
-returned, never duplicated. The API key comes from **Project settings → API
-access** (read-write) on healthchecks.io, lives only in that one shell line,
-and is never written to `.env`. Without a key, `setup` leaves the slot empty
-and says **UNMONITORED** in capitals; fill it in later, or re-run with the key.
+address and the API key at a prompt (typed, not echoed, not in your shell
+history; scripts can pass `HEALTHCHECKS_API_KEY=…` in the environment
+instead), keeps every value already in `.env`, and is safe to run again: a
+check that exists is returned, never duplicated. The API key comes from
+**Project settings → API access** (read-write) on healthchecks.io and is
+never written anywhere. Without a key, `setup` leaves the slot empty and says
+**UNMONITORED** in capitals; fill it in later, or re-run with the key.
+`setup` also records the data root's owner (uid/gid) in `.env`: every
+collector then runs as that user — not root — with all capabilities dropped,
+a read-only image filesystem and a 1 GB memory cap (`compose.yaml`).
+`.env` is written owner-only (0600): its ping URLs are capabilities.
 
 Then:
 
@@ -172,9 +177,21 @@ collector returns zero rows and reports success.
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
-pip install -e ".[test]"
+pip install -e ".[test,dev]"
 pytest            # 188 tests; HTTP is faked with httpx.MockTransport, PDFs are generated in-test, nothing touches the network
+ruff check .      # bugs-not-style rule set in pyproject.toml; clean as of 2026-09-12
 ```
+
+The image installs from `requirements.lock` / `requirements-extract.lock`
+(pip-compile, hashes included), so two builds a year apart install the same
+bytes. After editing `pyproject.toml` dependencies:
+
+```bash
+pip-compile --generate-hashes --strip-extras -o requirements.lock pyproject.toml
+pip-compile --generate-hashes --strip-extras --extra extract -o requirements-extract.lock pyproject.toml
+```
+
+To pick up base-image security updates: `docker compose build --pull && docker compose up -d`.
 
 Stories are in `docs/USER-STORIES.md`; every acceptance criterion names its
 test. Tests were written before the implementation.
@@ -186,6 +203,10 @@ No CI. This is the record.
 | Check | Result |
 |---|---|
 | `pytest` | 90/90 (168/168 after the 2026-09-09 bug hunt, 173/173 after the 2026-09-11 review of it, 188/188 with `setup` on 2026-09-12 — see `docs/FAILURE-MODES.md`) |
+| 2026-09-12 `ruff check` (F, E4/E7/E9, B, S, I) | clean, after 11 auto-fixes and 9 renames; `hadolint Dockerfile` clean |
+| 2026-09-12 `docker compose config` / `--profile setup config` (Compose v5.1.1) | valid; merged `setup` service runs as `0:0` under its profile, collectors as `${LONGSERIES_UID}:${LONGSERIES_GID}` with `cap_drop: ALL`, `read_only`, 1 GB cap; also 0 errors against the compose-spec JSON schema |
+| 2026-09-12 end to end over real sockets (installed CLI, fake gzip publisher, fake healthchecks API) | `setup` → `poll` (PDF stored decoded under its sha256, success ping received) → `show` → second `poll` unchanged → unmarked root refused → `repair` → `setup` again idempotent |
+| 2026-09-12 image built from the hash-pinned locks (211 MB, `USER 1000`), then in containers against the fakes | `run --rm setup` (root + `CHOWN`/`DAC_OVERRIDE` only) wrote `.env` 0600 and the marker, both owned by the host user; `run --rm amprion poll` as that user: clean run, files owned 1000:1000, watchdog pinged; `up -d` → `user=1000:1000 readonly=true capdrop=[ALL] init=true mem=1 GiB`. Caught one real defect: root without `DAC_OVERRIDE` could not write the marker — see the log |
 | Host poll ×2 against live Amprion | 3 new → 3 unchanged, 3 blobs, exit 0 |
 | Container poll ×2 against live Amprion | same, from inside the image |
 | Container with `--network=none` | clean failed run, exit 2, `P1 LANDING_UNREACHABLE`, manifest written, no traceback |
@@ -201,7 +222,7 @@ Runs wherever the bronze store is (the Beelink, or the same VPS). Needs the
 `extract` extra (pymupdf):
 
 ```bash
-pip install -e ".[extract]"                 # or: docker build --build-arg EXTRAS='[extract]' -t longseries:extract .
+pip install -e ".[extract]"                 # or: docker build --build-arg EXTRAS=extract -t longseries:extract .
 python -m longseries extract sources/amprion.yaml    --data $LONGSERIES_DATA   # bronze -> silver, idempotent
 python -m longseries extract sources/transnetbw.yaml --data $LONGSERIES_DATA
 python -m longseries series  sources/amprion.yaml    --data $LONGSERIES_DATA   # transitions, appeared/disappeared, restatements

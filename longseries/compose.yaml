@@ -17,6 +17,19 @@ x-collector: &collector
   build: .
   image: longseries:local
   restart: unless-stopped
+  # Non-root, as the OWNER of the data root: `setup` reads the mounted directory's
+  # uid/gid into .env, so nothing in the asset is written by root and no uid is guessed.
+  user: "${LONGSERIES_UID:-1000}:${LONGSERIES_GID:-1000}"
+  # A collector needs no capability, no writable image filesystem and no more than a
+  # few hundred MB (one payload is capped at 256 MB in the adapter). Take all of it away.
+  cap_drop: ["ALL"]
+  security_opt: ["no-new-privileges:true"]
+  read_only: true
+  tmpfs: ["/tmp"]
+  deploy:
+    resources:
+      limits:
+        memory: 1g
   # PID 1 is python, which has no SIGTERM handler, and the kernel DISCARDS SIGTERM
   # sent to PID 1: every `docker stop` stalled 10 s and then SIGKILLed. Landing that
   # inside a poll leaves a capture directory with no manifest. tini forwards signals.
@@ -110,6 +123,10 @@ services:
     <<: *collector
     profiles: ["setup"]
     restart: "no"
+    user: "0:0"          # root for this one run: it writes into the host user's directories and chowns what it wrote
+    # Root without capabilities cannot write into a directory it does not own (found by running
+    # this in a container on 2026-09-12): give the one-off setup back exactly the two it needs.
+    cap_add: ["CHOWN", "DAC_OVERRIDE"]
     container_name: longseries-setup
     command: ["setup", "/sources", "--data", "/data", "--env-file", "/work/.env"]
     environment:

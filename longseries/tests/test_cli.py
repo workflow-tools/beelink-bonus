@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
-import pytest
-
 from longseries.__main__ import main
 from longseries.store import ContentAddressedStore
 

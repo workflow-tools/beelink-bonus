@@ -1,7 +1,11 @@
 """Restart-safe scheduling: a container in a restart loop must not hammer the publisher."""
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 
-from longseries.__main__ import seconds_until_due
+import httpx
+import pytest
+
+from longseries.__main__ import _load, _ping_config_failure, cmd_schedule, main, seconds_until_due
+from longseries.config import ConfigError
 from longseries.store import ContentAddressedStore
 
 
@@ -30,12 +34,6 @@ def test_old_capture_polls_immediately(tmp_path):
 # built after the config loads, nothing ever pinged. The only signal was a check
 # going stale ~30 h later. sources/ is a mounted volume, so this fires on a hot
 # edit too — the very repair path an operator abroad would use.
-
-import httpx
-import pytest
-
-from longseries.__main__ import _load, _ping_config_failure, cmd_schedule, main
-from longseries.config import ConfigError
 
 
 class _Args:

@@ -41,13 +41,13 @@ def build_series(rows: list[dict]) -> dict:
             seen_in_edition[r["edition"]] = r
         # transitions: latest observation per edition, compared to the previous edition's
         latest_per_edition = [seen_in_edition[e] for e in sorted(seen_in_edition)]
-        for a, b in zip(latest_per_edition, latest_per_edition[1:]):
+        for a, b in zip(latest_per_edition, latest_per_edition[1:], strict=False):  # pairwise: lengths differ by one on purpose
             diff = _diff(a, b)
             if diff:
                 transitions.append({"entity": entity, "from_edition": a["edition"], "to_edition": b["edition"], "changes": diff})
 
     appeared, disappeared = [], []
-    for e_prev, e_next in zip(editions, editions[1:]):
+    for e_prev, e_next in zip(editions, editions[1:], strict=False):  # pairwise
         for ent in sorted(present[e_next] - present[e_prev]):
             appeared.append({"entity": ent, "edition": e_next})
         for ent in sorted(present[e_prev] - present[e_next]):

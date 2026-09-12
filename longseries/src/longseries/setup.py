@@ -93,6 +93,7 @@ def write_env(path: Path, updates: dict[str, str]) -> None:
         out.append(f"# written by `longseries setup` on {datetime.now(timezone.utc).date().isoformat()}")
         out.extend(f"{k}={v}" for k, v in pending.items())
     path.write_text("\n".join(out) + "\n", encoding="utf-8")
+    os.chmod(path, 0o600)   # ping URLs are capabilities; compose reads it as the owner
     _match_owner(path, path.parent)
 
 
@@ -193,6 +194,14 @@ def run_setup(*, sources_dir: Path, data_root: Path, env_path: Path, contact: st
         updates[CONTACT_KEY] = contact
     if not existing.get(DATA_KEY):
         updates[DATA_KEY] = host_data_path or "./data"
+    # compose runs every collector as `user: ${LONGSERIES_UID}:${LONGSERIES_GID}` — the owner
+    # of the data root, read here from the mounted directory itself, so nothing in the
+    # asset is ever written by root and no uid has to be guessed.
+    owner = root.stat()
+    if not existing.get("LONGSERIES_UID"):
+        updates["LONGSERIES_UID"] = str(owner.st_uid)
+    if not existing.get("LONGSERIES_GID"):
+        updates["LONGSERIES_GID"] = str(owner.st_gid)
     created_marker = mark_data_root(root, existing.get(DATA_KEY) or host_data_path)
 
     slots: list[Slot] = []
@@ -224,7 +233,9 @@ def run_setup(*, sources_dir: Path, data_root: Path, env_path: Path, contact: st
 
     say(f"setup: sources    {len(configs)} valid: " + ", ".join(cfg.source_id for _, cfg in configs))
     say(f"setup: data root  {root} — {MARKER} {'created' if created_marker else 'already there'}"
-        + (f" (host path {existing.get(DATA_KEY) or host_data_path})" if (existing.get(DATA_KEY) or host_data_path) else ""))
+        + (f" (host path {existing.get(DATA_KEY) or host_data_path})" if (existing.get(DATA_KEY) or host_data_path) else "")
+        + f"; collectors will run as uid {existing.get('LONGSERIES_UID') or owner.st_uid}"
+          f":{existing.get('LONGSERIES_GID') or owner.st_gid}, its owner")
     say(f"setup: .env       {env_path} — {'updated' if updates else 'unchanged'}"
         + (f" ({', '.join(sorted(updates))})" if updates else ""))
     say("setup: watchdogs")

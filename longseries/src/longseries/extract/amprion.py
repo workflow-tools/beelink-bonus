@@ -93,12 +93,12 @@ class AmprionSupplementaryParser:
         return "schaltanlage" in joined and "spannungs" in joined
 
     def _via_lines(self, text: str) -> list[dict]:
-        lines = [l.strip() for l in text.splitlines() if l.strip()]
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
         try:
             start = lines.index("Anmerkungen") + 1
         except ValueError:
             return []
-        end = next((i for i, l in enumerate(lines) if l.startswith("Haftungsausschluss")), len(lines))
+        end = next((i for i, line in enumerate(lines) if line.startswith("Haftungsausschluss")), len(lines))
         rows, i = [], start
         while i + 4 < end:
             name, kv, muni, design, year = lines[i:i + 5]

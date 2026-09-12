@@ -8,7 +8,7 @@ from datetime import timedelta
 
 import pytest
 
-from longseries.store import ContentAddressedStore, Disposition
+from longseries.store import Disposition
 
 
 def _hdrs():
@@ -110,7 +110,7 @@ def test_store_index_is_append_only_jsonl(store, now):
     idx = store.index_path("test-tso")
     lines = idx.read_text().strip().splitlines()
     assert len(lines) == 2
-    assert all(json.loads(l)["capture_id"] == "c1" for l in lines)
+    assert all(json.loads(line)["capture_id"] == "c1" for line in lines)
 
 
 def test_store_snapshot_writes_landing_html_under_capture(store):
@@ -270,7 +270,6 @@ def test_two_runs_in_the_same_second_do_not_share_a_capture_directory(store):
 
 
 def test_poll_claims_its_own_capture_directory(config, store, site, landing_html, now):
-    import httpx
     from longseries.adapter import BaseAdapter
     site.set(config.landing_url, 200, landing_html.encode())
     site.set("https://example.test/robots.txt", 404)

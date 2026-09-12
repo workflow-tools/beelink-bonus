@@ -469,7 +469,9 @@ deferred, and every deferral names the reason.
     asset.
 12. **`compose.yaml` is not exercised by any test** — no Docker in the suite.
     `init: true`, `create_host_path: false` and the log ceiling are verified by
-    reading, not by running.
+    reading, not by running — except once by hand, in containers, on
+    2026-09-12 (`log/2026-09-12-longseries-setup-and-boot-order.md`), which
+    caught a capability defect the reading had missed.
 
 ---
 

@@ -15,11 +15,11 @@ Alerts go to stderr so a scheduler's log shows them without parsing JSON."""
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import json
 import os
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .adapter import BaseAdapter

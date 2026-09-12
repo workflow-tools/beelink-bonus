@@ -86,5 +86,5 @@ def load_silver(store: ContentAddressedStore, source_id: str) -> list[dict]:
     for _, d in sorted(newest.values(), key=lambda t: t[1].name):
         for f in sorted(d.glob("*.jsonl")):
             with open(f, encoding="utf-8") as fh:
-                rows.extend(json.loads(l) for l in fh if l.strip())
+                rows.extend(json.loads(line) for line in fh if line.strip())
     return rows

@@ -5,9 +5,9 @@ from datetime import timedelta
 
 import httpx
 
+from longseries.adapter import RunResult
 from longseries.alerts import Alert, evaluate
 from longseries.heartbeat import Heartbeat, run_with_heartbeat
-from longseries.adapter import RunResult
 
 
 def _run(dispositions, failed=False):
@@ -92,13 +92,16 @@ def test_alert_structure_missing_when_fewer_documents_than_expected(config, now)
 
 def test_alert_structure_missing_when_landing_text_expectation_fails(config, now):
     config.expect_landing_text = "Schaltfeld"
-    run = _run([_d("u1", "unchanged")]); run.landing_expectation_met = False
+    run = _run([_d("u1", "unchanged")])
+    run.landing_expectation_met = False
     assert any(a.code == "STRUCTURE_MISSING" and "Schaltfeld" in a.message for a in evaluate(run, config, last_change_at=now, now=now))
 
 
 def test_no_structure_alert_when_expectations_met(config, now):
-    config.expect_min_documents = 1; config.expect_landing_text = "x"
-    run = _run([_d("u1", "unchanged")]); run.landing_expectation_met = True
+    config.expect_min_documents = 1
+    config.expect_landing_text = "x"
+    run = _run([_d("u1", "unchanged")])
+    run.landing_expectation_met = True
     assert not any(a.code in ("STRUCTURE_MISSING", "DISCOVERY_EMPTY") for a in evaluate(run, config, last_change_at=now, now=now))
 
 

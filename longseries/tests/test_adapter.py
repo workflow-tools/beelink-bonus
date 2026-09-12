@@ -8,7 +8,6 @@ import pytest
 
 import longseries.adapter as adapter_mod
 from longseries.adapter import BaseAdapter, LandingVanished
-from longseries.store import Disposition
 
 
 def _mk(site, config, store, sleeper=None):

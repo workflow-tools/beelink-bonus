@@ -5,7 +5,6 @@ import io
 import json
 
 import httpx
-import pytest
 
 from longseries.setup import MARKER, env_name, read_env, run_setup
 
@@ -87,6 +86,10 @@ def test_setup_creates_one_check_per_source_and_writes_env_and_marker(tmp_path):
     assert env["LONGSERIES_HEARTBEAT_URL_50HERTZ"] == "https://hc-ping.com/de-tso-50hertz-0123456789abcdef"
     marker = json.loads((tmp_path / "data" / MARKER).read_text(encoding="utf-8"))
     assert marker["longseries_root"] is True and marker["host_path"] == "/srv/longseries"
+    owner = (tmp_path / "data").stat()
+    assert env["LONGSERIES_UID"] == str(owner.st_uid) and env["LONGSERIES_GID"] == str(owner.st_gid), \
+        "compose runs the collectors as the data root's owner, read from the directory, never guessed"
+    assert (tmp_path / ".env").stat().st_mode & 0o777 == 0o600, "ping URLs are capabilities: owner-only"
     assert "0123456789abcdef" not in out, "a ping URL is a capability; the summary shows a redacted form"
     assert "k-secret" not in out and "k-secret" not in (tmp_path / ".env").read_text(encoding="utf-8")
 

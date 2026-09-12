@@ -29,24 +29,48 @@ wherever extraction runs.
 
 ## Install (Beelink, VPS, anything with Docker)
 
-The Beelink is dual-boot: Windows 11 day to day, Ubuntu 24.04 for GPU work
-(per this repo's runbooks). Collection runs under either — Docker Desktop on
-Windows or Docker Engine on Ubuntu — because it needs no GPU. Extraction that
-calls Ollama should run on the Ubuntu boot, where Ollama is a host systemd
-service (see `docs/OLLAMA-NIGHTWORK-DASHBOARDS.md`).
+The Beelink lives in Ubuntu 24.04. Docker Engine there is a system service, so
+the collectors come back after an unattended reboot with nobody logged in —
+provided the machine *boots* Ubuntu: `../docs/BEELINK-BOOT-ORDER.md` is the
+firmware fix for a dual-boot box that otherwise restarts into Windows.
+Collection needs no GPU; extraction that calls Ollama runs on the same boot,
+where Ollama is a host systemd service (`docs/OLLAMA-NIGHTWORK-DASHBOARDS.md`).
+
+Four lines. The data directory is the one thing you create by hand, because
+only you know which disk is the asset; `setup` does everything else.
 
 ```bash
-git clone https://github.com/workflow-tools/beelink-bonus
-cd beelink-bonus/longseries
-cp .env.example .env && $EDITOR .env      # contact, heartbeat URL, data dir
-docker compose up -d --build              # starts one container per source
+git clone https://github.com/workflow-tools/beelink-bonus && cd beelink-bonus/longseries
+sudo mkdir -p /srv/longseries && sudo chown "$USER" /srv/longseries    # THE ASSET lives here — pick the real disk
+LONGSERIES_DATA=/srv/longseries HEALTHCHECKS_API_KEY=… docker compose run --rm setup
+docker compose up -d --build                                             # one container per source
+```
+
+`setup` runs inside the image (no Python on the host). It validates every YAML
+in `sources/`, writes the `.longseries-root` marker into the data root, creates
+one healthchecks.io check per source through the Management API (period 1 day,
+grace 6 h, every integration your project already has attached) and writes
+`.env` — contact, data root, one ping URL per source. It asks for the contact
+address and the API key when they are not in the environment, keeps every
+value already in `.env`, and is safe to run again: a check that exists is
+returned, never duplicated. The API key comes from **Project settings → API
+access** (read-write) on healthchecks.io, lives only in that one shell line,
+and is never written to `.env`. Without a key, `setup` leaves the slot empty
+and says **UNMONITORED** in capitals; fill it in later, or re-run with the key.
+
+Then:
+
+```bash
 docker compose logs -f amprion            # first poll runs immediately
 docker compose run --rm amprion show /sources/amprion.yaml --data /data
 ```
 
-That's it. The `amprion` container polls once a day (`--every P1D`), sleeps,
-repeats. Polling more often than the publisher's cadence is free — unchanged
-files write zero bytes — and bounds how late a change is noticed.
+The `amprion` container polls once a day (`--every P1D`), sleeps, repeats.
+Polling more often than the publisher's cadence is free — unchanged files
+write zero bytes — and bounds how late a change is noticed. A collector
+refuses to write into a data root without the marker — an empty mountpoint
+looks exactly like a fresh install (failure mode #12) — and pings `/fail`
+with the reason every interval until the disk is back.
 
 One-off poll without the scheduler:
 
@@ -149,7 +173,7 @@ collector returns zero rows and reports success.
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[test]"
-pytest            # 173 tests; HTTP is faked with httpx.MockTransport, PDFs are generated in-test, nothing touches the network
+pytest            # 188 tests; HTTP is faked with httpx.MockTransport, PDFs are generated in-test, nothing touches the network
 ```
 
 Stories are in `docs/USER-STORIES.md`; every acceptance criterion names its
@@ -161,7 +185,7 @@ No CI. This is the record.
 
 | Check | Result |
 |---|---|
-| `pytest` | 90/90 (168/168 after the 2026-09-09 bug hunt, 173/173 after the 2026-09-11 review of it — see `docs/FAILURE-MODES.md`) |
+| `pytest` | 90/90 (168/168 after the 2026-09-09 bug hunt, 173/173 after the 2026-09-11 review of it, 188/188 with `setup` on 2026-09-12 — see `docs/FAILURE-MODES.md`) |
 | Host poll ×2 against live Amprion | 3 new → 3 unchanged, 3 blobs, exit 0 |
 | Container poll ×2 against live Amprion | same, from inside the image |
 | Container with `--network=none` | clean failed run, exit 2, `P1 LANDING_UNREACHABLE`, manifest written, no traceback |

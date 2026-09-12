@@ -199,6 +199,53 @@ a clean text table; TransnetBW's landing page is structured HTML. Neither
 needs a vision model. The Beelink's job here is normalising four publishers'
 vocabularies, not reading maps.
 
+## US-10 The install is one command, and safe to run twice
+
+As the operator — who had not installed this in a week because each step
+needed attention —
+I want `docker compose run --rm setup` to validate the sources, mark the
+data root, create the healthchecks checks and write `.env`, keeping what is
+already there, never storing the API key, and saying UNMONITORED in capitals
+when a source has no watchdog,
+so that the only manual acts are creating the data directory on the real
+disk and pasting one API key.
+
+Why: the design panel of 2026-09-09 filed an installer under "do not build"
+because it runs once; the owner overruled that on 2026-09-12 because the
+install had not happened at all. The panel's other ruling stands: `setup`
+never gates *collection* on the watchdog.
+
+Acceptance:
+- `test_setup_creates_one_check_per_source_and_writes_env_and_marker`
+- `test_setup_is_idempotent`
+- `test_setup_keeps_an_existing_url_and_fills_only_the_missing_one`
+- `test_setup_replaces_placeholders_copied_from_env_example`
+- `test_setup_without_an_api_key_leaves_the_slot_empty_and_shouts`
+- `test_setup_refuses_an_invalid_source_and_writes_nothing`
+- `test_setup_refuses_a_data_root_that_is_not_there`
+- `test_setup_requires_a_contact`
+- `test_setup_reports_an_api_failure_and_still_writes_the_rest`
+- `test_an_existing_check_is_returned_not_duplicated`
+- `test_env_name_follows_the_compose_convention` (the `.env` keys compose expects)
+- `test_read_env_reads_what_compose_reads`
+- `test_setup_is_wired_into_the_cli_and_needs_no_terminal`
+
+## US-11 A collector refuses a data root it cannot recognise
+
+As the archive engine,
+I want `poll` and `schedule` to refuse to write into a data root without the
+`.longseries-root` marker that `setup` created, pinging `/fail` with the
+reason every interval and recovering on remount with no restart,
+so that an unmounted disk or a wrong bind mount — an empty directory that
+looks exactly like a fresh install — never receives captures that will be
+shadowed the moment the real disk comes back (FAILURE-MODES #12). Read
+commands (`show`, `repair`, `extract`, `series`) need no marker.
+
+Acceptance:
+- `test_schedule_refuses_an_unmarked_data_root_and_pings`
+- `test_poll_refuses_an_unmarked_data_root`
+- `test_show_survives_a_capture_that_has_no_manifest` (a read command on an unmarked root)
+
 ## US-20 Parsers are replayable, versioned, pure
 
 As the archive engine,

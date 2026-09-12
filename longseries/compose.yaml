@@ -1,6 +1,7 @@
 # One container per long series, all from the same image. Add a series = add a
 # YAML under sources/ and a service block here. No code change.
 #
+#   docker compose run --rm setup           # the install: checks, .env, data-root marker (safe to re-run)
 #   docker compose up -d --build            # start every collector
 #   docker compose run --rm amprion poll /sources/amprion.yaml --data /data   # one-off poll
 #   docker compose run --rm amprion show /sources/amprion.yaml --data /data   # latest manifest + alerts
@@ -94,6 +95,31 @@ services:
       # goes green, and the captures written under the mountpoint are shadowed the
       # moment the real disk comes back. Run `mkdir -p ./data` (or point
       # LONGSERIES_DATA at the real disk) before the first `up`.
+      - type: bind
+        source: ${LONGSERIES_DATA:-./data}
+        target: /data
+        bind:
+          create_host_path: false
+
+  # `docker compose run --rm setup` — the install. Validates every YAML in sources/,
+  # marks the data root, creates one healthchecks check per source and writes .env.
+  # HEALTHCHECKS_API_KEY is read from THIS shell only and never written to .env
+  # (.env is handed to every collector container). Lives in a profile so `up`
+  # never starts it; `run` enables the profile by itself. Safe to re-run.
+  setup:
+    <<: *collector
+    profiles: ["setup"]
+    restart: "no"
+    container_name: longseries-setup
+    command: ["setup", "/sources", "--data", "/data", "--env-file", "/work/.env"]
+    environment:
+      - LONGSERIES_CONTACT
+      - LONGSERIES_DATA
+      - HEALTHCHECKS_API_KEY
+      - HEALTHCHECKS_API_URL
+    volumes:
+      - ./sources:/sources:ro
+      - .:/work
       - type: bind
         source: ${LONGSERIES_DATA:-./data}
         target: /data

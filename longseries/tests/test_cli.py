@@ -100,3 +100,25 @@ def test_show_says_never_when_nothing_has_changed_yet(tmp_path, capsys):
     store.write_manifest("test-tso", "2026-09-01T120000Z", {"counts": {"new": 0}, "failed": False})
     assert main(["show", _source(tmp_path), "--data", str(tmp_path / "data")]) == 0
     assert json.loads(capsys.readouterr().out)["last_change_at"] == "never"
+
+
+def test_setup_is_wired_into_the_cli_and_needs_no_terminal(tmp_path, capsys, monkeypatch):
+    """US-10: the compose `setup` service runs exactly this. Without an API key it
+    must still finish, write .env and the marker, and say UNMONITORED in capitals."""
+    sources = tmp_path / "sources"
+    sources.mkdir()
+    (sources / "test.yaml").write_text(SOURCE_YAML, encoding="utf-8")
+    data = tmp_path / "data"
+    data.mkdir()
+    monkeypatch.setenv("LONGSERIES_CONTACT", "mailto:archive@example.test")
+    monkeypatch.setenv("LONGSERIES_DATA", "/srv/longseries")
+    monkeypatch.delenv("HEALTHCHECKS_API_KEY", raising=False)
+    env = tmp_path / ".env"
+    assert main(["setup", str(sources), "--data", str(data), "--env-file", str(env)]) == 0
+    out = capsys.readouterr().out
+    assert "UNMONITORED" in out
+    assert (data / ".longseries-root").is_file()
+    text = env.read_text(encoding="utf-8")
+    assert "LONGSERIES_CONTACT=mailto:archive@example.test" in text
+    assert "LONGSERIES_DATA=/srv/longseries" in text
+    assert "LONGSERIES_HEARTBEAT_URL_TEST=" in text

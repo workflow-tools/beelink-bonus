@@ -279,6 +279,17 @@ collection. Below it, sequence after ninety days of real operation —
   engineering one), **blob pruning**, an **installer**, and **DOM
   canonicalisation** (deferred in Q6, still not needed).
 
+> **Overridden 2026-09-12 (owner): the installer was built** — `longseries
+> setup`, one command inside the image (`docker compose run --rm setup`). The
+> subtract designer's reason — "real; irrelevant at three sources and one poll
+> a day" — priced it by how often it runs. The owner's constraint is attention,
+> not skill: the five-command install had not happened in the week since this
+> document, and the healthchecks step was the part needing a human. The
+> critic's ruling above still stands: `setup` never gates *collection* on the
+> watchdog — a missing key is a capital-letters UNMONITORED, not a refusal.
+> The one gate added is the data-root marker (FAILURE-MODES #12), which
+> protects the asset, not the alarm.
+
 ---
 
 ## 5. The gaps nobody designed for — year-one operational risk

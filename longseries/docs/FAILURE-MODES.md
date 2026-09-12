@@ -63,7 +63,7 @@ Labels used throughout:
 | 9 | Disk nearly full — no ENOSPC yet | *Nothing* | Nothing. No free-space check anywhere | **GAP** |
 | 10 | Container killed mid-write (`docker stop`, OOM, power) | Next `show` names the capture as incomplete; the poll is simply redone | `init: true` gives PID 1 a signal handler; blobs are finalised with `os.link` under a per-writer scratch name; the index rolls back; capture directories are claimed with `mkdir(exist_ok=False)`; `show` falls back to the newest complete capture | **COVERED** (store + `show`) / **HANDLED** (`init: true`) |
 | 11 | A torn trailing line already in `index.jsonl` | `IndexCorrupt: …/index.jsonl: line N is not valid JSON …` naming the file and line | Every read raises with a location instead of a bare `JSONDecodeError`; `longseries repair` trims a **trailing** partial line only. A complete last row missing only its newline is not damage: `repair` leaves it, and the next append terminates it instead of gluing the new row onto it | **COVERED** |
-| 12 | Data root not mounted (bind mount points at nothing) | *Nothing.* Green ping, everything re-captured as `new`, forever | `create_host_path: false` makes Docker refuse to start rather than invent an empty host directory | **HANDLED** (compose is not exercised by the suite) — the in-collector half is a **GAP** |
+| 12 | Data root not mounted, or a bind mount pointing at the wrong (empty) directory | `[schedule] config error: /data: no .longseries-root marker …` on stderr and a `/fail` ping carrying that text every interval; a one-off `poll` exits 1 | `create_host_path: false` makes Docker refuse to invent a host directory, and `poll`/`schedule` refuse to write into a root that lacks the marker `longseries setup` wrote on the real disk — fail closed, alarm every interval, recover on remount with no restart. Read commands need no marker | **COVERED** (collector) / **HANDLED** (compose) |
 | 13 | Watchdog URL rotated, check deleted, or account lapsed | `[heartbeat] ping hc-ping.com/8f3c1e2a… FAILED after 3 attempt(s): HTTP 404` on stderr — **and nothing else** | Non-2xx is detected, `/fail` is retried 3× on 408/429/5xx, and every failure is shouted to stderr | **COVERED** (detection) / **GAP** (nothing monitors the monitor) |
 | 14 | No heartbeat configured at all | `[heartbeat] NO HEARTBEAT CONFIGURED — this source is UNMONITORED` on stderr at every run | Says so, loudly, then runs anyway | **COVERED** |
 | 15 | Server dribbles bytes forever (no timeout ever fires) | `/fail` with the document recorded as failed, or `P1 LANDING_UNREACHABLE` | `_get` streams under a 256 MB ceiling and a 900 s whole-request deadline — httpx has no whole-request budget of its own | **COVERED** (documents + landing) |
@@ -435,9 +435,11 @@ deferred, and every deferral names the reason.
 1. **No off-host backup or replica is actually running** (#26, #17). ADR-001 Q1
    specifies both; neither exists as code in this repo. Owner action, not a
    code fix.
-2. **A collector cannot tell an unmounted root from a fresh install** (#12).
-   The compose-side trigger is removed; the in-collector marker is deferred
-   pending an owner decision on the failure model.
+2. ~~**A collector cannot tell an unmounted root from a fresh install**~~ (#12).
+   **Closed 2026-09-12.** `longseries setup` marks the data root and the
+   collector fails closed without the marker — the owner decision the
+   deferral was waiting on, taken in favour of the asset over uptime: a poll
+   into the wrong directory is a capture that will be shadowed, not a capture.
 3. **Nothing monitors the monitor** (#13). A deleted or lapsed healthchecks
    check silences a source permanently; only stderr says so.
 4. **The `robots.txt` fetch is unbounded** (#16). It bypasses the streamed,

@@ -8,6 +8,7 @@
     python -m longseries series   sources/x.yaml --data /data [--json]       # silver -> transitions
 
     python -m longseries repair   sources/x.yaml --data /data                # trim a torn trailing index line
+    python -m longseries setup    sources/ --data /data --env-file .env     # the install, see setup.py
 
 Exit codes: 0 clean · 2 run failed (a P0 fired) · 3 run completed with P1 alerts.
 Alerts go to stderr so a scheduler's log shows them without parsing JSON."""
@@ -24,6 +25,7 @@ from pathlib import Path
 from .adapter import BaseAdapter
 from .config import ConfigError, load_source_config, parse_cadence
 from .heartbeat import Heartbeat, redact, run_with_heartbeat
+from .setup import DEFAULT_API_URL, MARKER, data_root_is_marked, env_name, read_env, run_setup
 from .store import ContentAddressedStore
 
 
@@ -68,7 +70,22 @@ def _ping_config_failure(source: str, err: Exception, transport=None, *, what: s
         return False
 
 
+def _require_data_root(data: str) -> None:
+    """Fail CLOSED before writing anything. An unmounted disk or a wrong bind mount
+    is an empty directory that looks exactly like a fresh install: every document
+    re-captured as new, every staleness alarm silent (they are gated on history),
+    the watchdog green — and the captures shadowed the moment the real disk comes
+    back. The marker `longseries setup` writes is the only thing that tells the
+    asset's disk from a directory that merely exists. Raises ConfigError so the
+    schedule loop's config-failure path pings /fail with the reason every interval.
+    Read commands (show, repair, extract, series) do not need the marker."""
+    if not data_root_is_marked(data):
+        raise ConfigError(f"{data}: no {MARKER} marker — the data root is not mounted, or `longseries setup` "
+                          f"never ran on this host. Refusing to collect into it.")
+
+
 def cmd_poll(args) -> int:
+    _require_data_root(args.data)
     config = _load(args.source)
     store = ContentAddressedStore(Path(args.data))
     adapter = BaseAdapter(config, store)
@@ -139,6 +156,7 @@ def cmd_schedule(args, *, sleeper=time.sleep, heartbeat_transport=None) -> int:
         # exiting into a restart loop that never pings anything.
         try:
             config = _load(args.source)
+            _require_data_root(args.data)
         except Exception as e:  # NOT `except ConfigError`: ConfigError subclasses ValueError,
             # so the relation runs the wrong way and a plain ValueError (a malformed
             # int) or an OSError (a failed ./sources mount) escaped into a restart
@@ -201,6 +219,29 @@ def cmd_repair(args) -> int:
     return 0
 
 
+def cmd_setup(args) -> int:
+    """See setup.py. Values come from the environment of this one run; a terminal is
+    asked for what is missing; nothing is asked when there is no terminal."""
+    contact = os.environ.get("LONGSERIES_CONTACT") or None
+    api_key = os.environ.get("HEALTHCHECKS_API_KEY") or None
+    existing = read_env(Path(args.env_file))
+    slots_missing = [env_name(p) for p in sorted(Path(args.source).glob("*.yaml")) if not existing.get(env_name(p))]
+    try:
+        interactive = sys.stdin.isatty()
+    except (AttributeError, ValueError):
+        interactive = False
+    if interactive:
+        if not (contact or existing.get("LONGSERIES_CONTACT")):
+            contact = input("Contact for the User-Agent (mailto:you@example.com): ").strip() or None
+        if not api_key and slots_missing:
+            import getpass
+            api_key = getpass.getpass("healthchecks.io API key (read-write; blank = create the checks later): ").strip() or None
+    return run_setup(sources_dir=Path(args.source), data_root=Path(args.data), env_path=Path(args.env_file),
+                     contact=contact, api_key=api_key,
+                     api_url=os.environ.get("HEALTHCHECKS_API_URL") or DEFAULT_API_URL,
+                     host_data_path=os.environ.get("LONGSERIES_DATA") or None)
+
+
 def cmd_show(args) -> int:
     config = _load(args.source)
     store = ContentAddressedStore(Path(args.data))
@@ -231,9 +272,11 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="longseries")
     sub = p.add_subparsers(dest="cmd", required=True)
     for name, fn in (("poll", cmd_poll), ("schedule", cmd_schedule), ("show", cmd_show), ("validate", cmd_validate),
-                     ("extract", cmd_extract), ("series", cmd_series), ("repair", cmd_repair)):
+                     ("extract", cmd_extract), ("series", cmd_series), ("repair", cmd_repair), ("setup", cmd_setup)):
         sp = sub.add_parser(name)
-        sp.add_argument("source")
+        sp.add_argument("source", help="directory of source YAMLs" if name == "setup" else "source YAML")
+        if name == "setup":
+            sp.add_argument("--env-file", default=".env", help="the .env compose reads (default ./.env)")
         if name != "validate":
             sp.add_argument("--data", required=True)
         if name == "schedule":

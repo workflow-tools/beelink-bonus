@@ -128,6 +128,14 @@ def _good_source(tmp_path):
     return p
 
 
+def _marked(tmp_path):
+    """A data root `longseries setup` has marked — the only kind a collector writes into."""
+    d = tmp_path / "data"
+    d.mkdir(exist_ok=True)
+    (d / ".longseries-root").write_text("{}", encoding="utf-8")
+    return d
+
+
 def test_schedule_pings_when_the_poll_itself_crashes(tmp_path, monkeypatch):
     seen, transport = _watchdog(monkeypatch)
 
@@ -140,7 +148,7 @@ def test_schedule_pings_when_the_poll_itself_crashes(tmp_path, monkeypatch):
         raise _Stop()
 
     with pytest.raises(_Stop):
-        cmd_schedule(_Args(_good_source(tmp_path), tmp_path / "data"),
+        cmd_schedule(_Args(_good_source(tmp_path), _marked(tmp_path)),
                      sleeper=sleeper, heartbeat_transport=transport)
     assert len(seen) == 1, "a crash with no Heartbeat yet must still reach the watchdog"
     url, body = seen[0]
@@ -159,10 +167,41 @@ def test_schedule_survives_a_config_failure_that_is_not_a_config_error(tmp_path,
             raise _Stop()
 
     with pytest.raises(_Stop):
-        cmd_schedule(_Args(_good_source(tmp_path), tmp_path / "data"),
+        cmd_schedule(_Args(_good_source(tmp_path), _marked(tmp_path)),
                      sleeper=sleeper, heartbeat_transport=transport)
     assert len(calls) == 2, "the loop must retry, not exit into `restart: unless-stopped`"
     assert all(u.endswith("/fail") for u, _ in seen) and len(seen) == 2
+
+
+# --- a data root the collector cannot recognise is refused, loudly -------------
+# US-11 / FAILURE-MODES #12: an unmounted disk or a wrong bind mount is an empty
+# directory that looks exactly like a fresh install. Captures written there are
+# shadowed the moment the real disk comes back. Fail closed, ping every interval.
+
+def test_schedule_refuses_an_unmarked_data_root_and_pings(tmp_path, monkeypatch):
+    seen, transport = _watchdog(monkeypatch)
+    polled = []
+    monkeypatch.setattr("longseries.__main__.cmd_poll", lambda _a: polled.append(1) or 0)
+    (tmp_path / "data").mkdir()   # exists, is empty, has no marker
+    calls = []
+
+    def sleeper(_s):
+        calls.append(_s)
+        if len(calls) >= 2:
+            raise _Stop()
+
+    with pytest.raises(_Stop):
+        cmd_schedule(_Args(_good_source(tmp_path), tmp_path / "data"),
+                     sleeper=sleeper, heartbeat_transport=transport)
+    assert polled == [], "nothing may be written into an unmarked root"
+    assert len(seen) == 2 and all(u.endswith("/fail") and ".longseries-root" in body for u, body in seen)
+    assert len(calls) == 2, "the loop keeps retrying so a remounted disk recovers with no restart"
+
+
+def test_poll_refuses_an_unmarked_data_root(tmp_path, capsys):
+    (tmp_path / "data").mkdir()
+    assert main(["poll", str(_good_source(tmp_path)), "--data", str(tmp_path / "data")]) == 1
+    assert ".longseries-root" in capsys.readouterr().err
 
 
 # --- the restart-loop gate must not be disabled by a stray directory ----------
